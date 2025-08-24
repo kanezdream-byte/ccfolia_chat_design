@@ -1,0 +1,2595 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRPG 채팅 기록 에디터</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f0f2f5;
+            margin: 0;
+            padding: 0;
+            color: #2c3e50;
+            overflow-x: hidden;
+        }
+
+        .container {
+            position: relative;
+            min-height: 100vh;
+            padding: 12px;
+            padding-top: 84px; /* 헤더 공간 확보 */
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: none;
+            border-bottom: 1px solid rgba(228, 230, 235, 0.3);
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            height: 72px;
+            box-sizing: border-box;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+            pointer-events: none;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 800;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            user-select: none;
+            cursor: default;
+            position: relative;
+            z-index: 1;
+            letter-spacing: -0.5px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header-action-btn {
+            background: rgba(66, 103, 178, 0.9);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            white-space: nowrap;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 8px rgba(66, 103, 178, 0.2);
+            min-width: 90px;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .header-action-btn:hover {
+            background: rgba(54, 88, 153, 0.95);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(66, 103, 178, 0.3);
+        }
+
+        .header-action-btn.secondary {
+            background: rgba(228, 230, 235, 0.9);
+            color: #050505;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-action-btn.secondary:hover {
+            background: rgba(208, 210, 215, 0.95);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 12px;
+            min-height: calc(100vh - 100px); /* 헤더와 패딩 고려 */
+            position: relative;
+        }
+
+        .controls-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e4e6eb;
+            height: 100%;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .control-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 16px;
+            border: none;
+            flex-shrink: 0;
+            transition: all 0.2s ease;
+        }
+
+        .control-section:hover {
+            background: #f1f3f4;
+            transform: translateY(-1px);
+        }
+
+        .section-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #4267b2;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 3px;
+            height: 16px;
+            background: linear-gradient(135deg, #4267b2, #365899);
+            border-radius: 2px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1c1e21;
+        }
+
+        select, input[type="number"] {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #dddfe2;
+            border-radius: 8px;
+            font-size: 13px;
+            background: white;
+            color: #1c1e21;
+            transition: all 0.2s ease;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        input[type="color"] {
+            width: 100%;
+            height: 40px;
+            padding: 4px;
+            border: 1px solid #dddfe2;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s ease;
+        }
+
+        input[type="checkbox"] {
+            margin-right: 10px;
+            transform: scale(1.3);
+            accent-color: #4267b2;
+        }
+
+        label:has(input[type="checkbox"]) {
+            display: flex;
+            align-items: center;
+            margin-bottom: 16px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            transition: background 0.2s ease;
+        }
+
+        label:has(input[type="checkbox"]):hover {
+            background: rgba(66, 103, 178, 0.05);
+        }
+
+        select:hover, input[type="number"]:hover, input[type="color"]:hover {
+            border-color: #4267b2;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        select:focus, input[type="number"]:focus, input[type="color"]:focus {
+            outline: none;
+            border-color: #4267b2;
+            box-shadow: 0 0 0 3px rgba(66, 103, 178, 0.15);
+        }
+
+        button {
+            width: 100%;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4267b2 0%, #365899 100%);
+            color: white;
+            border: 1px solid #365899;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #365899 0%, #2d4373 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(66, 103, 178, 0.3);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            color: #495057;
+            border: 1px solid #dee2e6;
+        }
+
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .preview-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+            border: 2px solid #4267b2;
+            overflow: hidden;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative; /* 레이아웃 안정성을 위해 추가 */
+        }
+
+        .preview-container.aspect-mode {
+            height: auto;
+            align-self: flex-start;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+        }
+
+        .preview-container.aspect-mode .preview-header {
+            width: 100%;
+        }
+
+        .preview-container.aspect-mode .chat-container {
+            width: auto;
+        }
+
+        .preview-header {
+            background: linear-gradient(135deg, #4267b2 0%, #365899 100%);
+            color: white;
+            padding: 12px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .preview-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .preview-badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .header-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 600;
+            transition: all 0.2s;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .header-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .pagination-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .pagination-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .page-info {
+            font-size: 11px;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 4px 8px;
+            border-radius: 8px;
+            min-width: 50px;
+            text-align: center;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .chat-container {
+            background: #ffffff;
+            padding: 16px;
+            overflow-y: auto;
+            flex: 1;
+            transition: all 0.3s;
+        }
+
+        /* Aspect Ratios */
+        .chat-container.aspect-square { 
+            aspect-ratio: 1 / 1; 
+            flex: none !important;
+            height: auto;
+            width: 100%;
+            max-width: 500px;
+            max-height: 500px;
+            overflow-y: auto;
+            position: relative;
+        }
+        .chat-container.aspect-9-16 { 
+            aspect-ratio: 9 / 16; 
+            flex: none !important;
+            height: auto;
+            width: 100%;
+            max-width: 400px;
+            overflow-y: auto;
+            position: relative;
+        }
+        .chat-container.aspect-4-5 { 
+            aspect-ratio: 4 / 5; 
+            flex: none !important;
+            height: auto;
+            width: 100%;
+            max-width: 450px;
+            overflow-y: auto;
+            position: relative;
+        }
+        .chat-container.aspect-full { 
+            /* Use full available height */
+        }
+
+        /* Custom scrollbar styling for aspect ratio containers */
+        .chat-container.aspect-square::-webkit-scrollbar,
+        .chat-container.aspect-9-16::-webkit-scrollbar,
+        .chat-container.aspect-4-5::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-container.aspect-square::-webkit-scrollbar-track,
+        .chat-container.aspect-9-16::-webkit-scrollbar-track,
+        .chat-container.aspect-4-5::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+        }
+
+        .chat-container.aspect-square::-webkit-scrollbar-thumb,
+        .chat-container.aspect-9-16::-webkit-scrollbar-thumb,
+        .chat-container.aspect-4-5::-webkit-scrollbar-thumb {
+            background: rgba(66, 103, 178, 0.6);
+            border-radius: 4px;
+        }
+
+        .chat-container.aspect-square::-webkit-scrollbar-thumb:hover,
+        .chat-container.aspect-9-16::-webkit-scrollbar-thumb:hover,
+        .chat-container.aspect-4-5::-webkit-scrollbar-thumb:hover {
+            background: rgba(66, 103, 178, 0.8);
+        }
+
+        /* Add some padding at the bottom for better scrolling experience */
+        .chat-container.aspect-square .message:last-child,
+        .chat-container.aspect-9-16 .message:last-child,
+        .chat-container.aspect-4-5 .message:last-child,
+        .chat-container.aspect-square .system-message:last-child,
+        .chat-container.aspect-9-16 .system-message:last-child,
+        .chat-container.aspect-4-5 .system-message:last-child {
+            margin-bottom: 16px;
+        }
+
+        /* Solid Color Block */
+        .solid-color-block {
+            background: rgba(240, 242, 245, 0.8);
+            border-radius: 6px;
+            margin: 6px 0;
+            padding: 12px;
+            position: relative;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .solid-color-block .block-controls {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            display: none;
+            gap: 4px;
+        }
+        
+        .solid-color-block:hover .block-controls {
+            display: flex;
+        }
+        
+        .block-control-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            border: 1px solid #dddfe2;
+            background: white;
+            color: #65676b;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: all 0.2s;
+            padding: 0;
+        }
+        
+        .block-control-btn:hover {
+            background: #f0f2f5;
+            color: #1c1e21;
+        }
+        
+        .block-control-btn.delete:hover {
+            background: #ffebee;
+            color: #c62828;
+            border-color: #ffcdd2;
+        }
+
+        .theme-cocofolia {
+            background: #272729;
+        }
+
+        .theme-cocofolia .message {
+            display: flex;
+            padding: 12px 16px;
+            border-radius: 0;
+            margin-bottom: 8px;
+            background: #36393f;
+            border: none;
+            border-left: 4px solid #7289da;
+            transition: all 0.2s;
+        }
+
+        .theme-cocofolia .message:hover {
+            background: #32353b;
+            border-left-color: #677bc4;
+        }
+
+        .theme-cocofolia .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            margin-right: 12px;
+            background: linear-gradient(135deg, #7289da 0%, #5b6eae 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .theme-cocofolia .message-content {
+            flex: 1;
+        }
+
+        .theme-cocofolia .character-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+            font-size: 13px;
+            color: #ffffff;
+        }
+
+        .theme-cocofolia .message-text {
+            color: #dcddde;
+            line-height: 1.5;
+            font-size: 12px;
+        }
+
+        .theme-cocofolia .timestamp {
+            color: #72767d;
+            font-size: 10px;
+            margin-top: 2px;
+        }
+
+        .theme-cocofolia .solid-color-block {
+            background: #2f3136;
+            border-radius: 0;
+            border-left: 4px solid #faa61a;
+            border-top: none;
+            border-right: none;
+            border-bottom: none;
+            padding: 12px 16px;
+        }
+
+        /* Discord Style */
+        .theme-discord {
+            background: #313338;
+            color: #dbdee1;
+        }
+
+        .theme-discord .message {
+            display: flex;
+            padding: 6px 12px;
+            margin: 1px 0;
+            border-radius: 4px;
+            transition: background 0.1s;
+        }
+
+        .theme-discord .message:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .theme-discord .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            margin-right: 12px;
+            background: #5865f2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .theme-discord .character-name {
+            font-weight: 500;
+            margin-bottom: 1px;
+            display: inline-block;
+            font-size: 13px;
+        }
+
+        .theme-discord .timestamp {
+            display: inline-block;
+            margin-left: 6px;
+            color: #949ba4;
+            font-size: 10px;
+            font-weight: 400;
+        }
+
+        .theme-discord .message-text {
+            color: #dbdee1;
+            line-height: 1.3;
+            margin-top: 1px;
+            font-size: 12px;
+        }
+
+        /* Twitter Style */
+        .theme-twitter {
+            background: #ffffff;
+        }
+
+        .theme-twitter .message {
+            padding: 12px;
+            border-bottom: 1px solid #eff3f4;
+            transition: background 0.2s;
+        }
+
+        .theme-twitter .message:hover {
+            background: #f7f9fa;
+        }
+
+        .theme-twitter .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            margin-right: 10px;
+            background: #1d9bf0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+            float: left;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .theme-twitter .message-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 3px;
+        }
+
+        .theme-twitter .character-name {
+            font-weight: 700;
+            color: #0f1419;
+            margin-right: 4px;
+            font-size: 13px;
+        }
+
+        .theme-twitter .timestamp {
+            color: #536471;
+            font-size: 11px;
+        }
+
+        .theme-twitter .message-text {
+            color: #0f1419;
+            line-height: 1.4;
+            margin-left: 46px;
+            font-size: 12px;
+        }
+
+        /* System Messages */
+        .theme-cocofolia .system-message {
+            background: #f0f2f5;
+            border-left: 3px solid #8b9dc3;
+            padding: 8px 12px;
+            margin: 6px 0;
+            border-radius: 4px;
+            color: #65676b;
+            font-size: 11px;
+            font-style: italic;
+        }
+
+        .theme-discord .system-message {
+            background: rgba(88, 101, 242, 0.08);
+            border-left: 3px solid #5865f2;
+            padding: 6px 12px;
+            margin: 4px 0;
+            color: #949ba4;
+            font-size: 11px;
+            font-style: italic;
+        }
+
+        .theme-twitter .system-message {
+            background: #f7f9fa;
+            border-left: 3px solid #1d9bf0;
+            padding: 8px 12px;
+            margin: 6px 0;
+            color: #536471;
+            font-size: 11px;
+            font-style: italic;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: -9999px;
+        }
+
+        .file-input-label {
+            display: block;
+            width: 100%;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            color: #495057;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            text-align: center;
+            transition: all 0.2s ease;
+            font-size: 13px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .file-input-label:hover {
+            background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .file-status {
+            margin-top: 8px;
+            padding: 8px 12px;
+            background: #e3f2fd;
+            border: 1px solid #90caf9;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #1976d2;
+            display: none;
+        }
+
+        .file-status.active {
+            display: block;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .stat-item {
+            background: #f0f2f5;
+            padding: 6px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+
+        .stat-label {
+            color: #65676b;
+            margin-bottom: 2px;
+        }
+
+        .stat-value {
+            color: #1c1e21;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .name-change-item {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        .name-change-item input {
+            flex: 1;
+            padding: 8px 10px;
+            border: 1px solid #dddfe2;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .original-name {
+            flex: 1;
+            padding: 8px 10px;
+            background: #f0f2f5;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #65676b;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .editable-text {
+            cursor: text;
+            transition: background 0.2s;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        .editable-text:hover {
+            background: rgba(66, 103, 178, 0.1);
+        }
+
+        .editable-text:focus {
+            outline: 2px solid #4267b2;
+            background: white;
+        }
+
+        .message-controls {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            display: none;
+            gap: 4px;
+        }
+
+        .message:hover .message-controls,
+        .system-message:hover .message-controls {
+            display: flex;
+        }
+
+        .message-control-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            border: 1px solid #dddfe2;
+            background: white;
+            color: #65676b;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: all 0.2s;
+            padding: 0;
+        }
+
+        .message-control-btn:hover {
+            background: #f0f2f5;
+            color: #1c1e21;
+        }
+
+        .message-control-btn.delete:hover {
+            background: #ffebee;
+            color: #c62828;
+            border-color: #ffcdd2;
+        }
+
+        .message-control-btn.duplicate:hover {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-color: #c8e6c9;
+        }
+
+        .message-control-btn.add:hover {
+            background: #e3f2fd;
+            color: #1976d2;
+            border-color: #bbdefb;
+        }
+
+        .message-control-btn.move-up:hover {
+            background: #f3e5f5;
+            color: #7b1fa2;
+            border-color: #ce93d8;
+        }
+
+        .message-control-btn.move-down:hover {
+            background: #f3e5f5;
+            color: #7b1fa2;
+            border-color: #ce93d8;
+        }
+
+        .message {
+            position: relative;
+        }
+
+        .system-message {
+            position: relative;
+        }
+
+        .add-message-panel {
+            background: #e3f2fd;
+            border: 2px dashed #90caf9;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 12px 0;
+            display: none;
+        }
+
+        .add-message-panel.active {
+            display: block;
+        }
+
+        .add-message-controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .add-message-type {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #90caf9;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+            font-size: 13px;
+        }
+
+        .add-message-type:hover {
+            background: #f3f4f6;
+        }
+
+        .add-message-type.selected {
+            background: #1976d2;
+            color: white;
+            border-color: #1976d2;
+        }
+
+        .add-message-form {
+            display: grid;
+            gap: 8px;
+        }
+
+        .add-message-form input,
+        .add-message-form textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #dddfe2;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .add-message-form textarea {
+            min-height: 60px;
+            resize: vertical;
+        }
+
+        .add-message-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .add-message-actions button {
+            flex: 1;
+            padding: 8px 12px;
+            font-size: 13px;
+        }
+
+        .edit-mode-notice {
+            background: #e3f2fd;
+            border: 1px solid #90caf9;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            font-size: 13px;
+            color: #1976d2;
+            display: none;
+        }
+
+        .edit-mode-notice.active {
+            display: block;
+        }
+
+        /* Text Formatting Styles */
+        .text-bold { font-weight: bold; }
+        .text-italic { font-style: italic; }
+        .text-mosaic {
+            background: linear-gradient(45deg, #000 25%, #fff 25%, #fff 50%, #000 50%, #000 75%, #fff 75%);
+            background-size: 8px 8px;
+            color: transparent;
+            -webkit-background-clip: text;
+            background-clip: text;
+            filter: blur(2px);
+        }
+        .text-blind {
+            background: #000;
+            color: #000;
+            border-radius: 3px;
+            transition: all 0.3s;
+        }
+        .text-blind:hover {
+            background: transparent;
+            color: inherit;
+        }
+        .text-center {
+            text-align: center;
+        }
+
+        /* Font Size Classes */
+        .font-small .message-text { font-size: 10px; }
+        .font-small .character-name { font-size: 11px; }
+        .font-small .timestamp { font-size: 8px; }
+        .font-small .system-message { font-size: 9px; }
+
+        .font-medium .message-text { font-size: 12px; }
+        .font-medium .character-name { font-size: 13px; }
+        .font-medium .timestamp { font-size: 10px; }
+        .font-medium .system-message { font-size: 11px; }
+
+        .font-large .message-text { font-size: 14px; }
+        .font-large .character-name { font-size: 15px; }
+        .font-large .timestamp { font-size: 12px; }
+        .font-large .system-message { font-size: 13px; }
+
+        .font-extra-large .message-text { font-size: 16px; }
+        .font-extra-large .character-name { font-size: 17px; }
+        .font-extra-large .timestamp { font-size: 14px; }
+        .font-extra-large .system-message { font-size: 15px; }
+
+        /* Avatar Size Classes - 원형 아바타 크기 조절 시스템 */
+        
+        /* 작은 아바타 (28px) - 컴팩트한 디자인용 */
+        .avatar-small .avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;  /* 완전한 원형 */
+            margin-right: 10px;   /* 메시지와의 간격 */
+            background: linear-gradient(135deg, #7289da 0%, #5b6eae 100%);
+            display: flex;
+            align-items: center;      /* 수직 중앙 정렬 */
+            justify-content: center;  /* 수평 중앙 정렬 */
+            color: white;
+            font-weight: 600;
+            font-size: 10px;  /* 작은 아바타에 맞는 폰트 크기 */
+            overflow: hidden;
+            flex-shrink: 0;   /* 크기 고정 */
+        }
+
+        /* 보통 아바타 (36px) - 기본 크기 */
+        .avatar-medium .avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            margin-right: 12px;
+            background: linear-gradient(135deg, #7289da 0%, #5b6eae 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;  /* 표준 폰트 크기 */
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        /* 큰 아바타 (44px) - 강조용 */
+        .avatar-large .avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            margin-right: 14px;
+            background: linear-gradient(135deg, #7289da 0%, #5b6eae 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;  /* 큰 아바타에 맞는 폰트 크기 */
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        /* 매우 큰 아바타 (52px) - 프레젠테이션용 */
+        .avatar-extra-large .avatar {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            margin-right: 16px;
+            background: linear-gradient(135deg, #7289da 0%, #5b6eae 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 18px;  /* 매우 큰 아바타에 맞는 폰트 크기 */
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        /* Timestamp Display Control - 타임스탬프 표시/숨김 제어 */
+        .hide-timestamp .timestamp {
+            display: none !important;  /* 타임스탬프 완전히 숨김 */
+        }
+
+        /* 타임스탬프 숨김 시 메시지 여백 조정 */
+        .hide-timestamp .character-name {
+            margin-bottom: 0;  /* 캐릭터명 하단 여백 제거 */
+        }
+
+        /* Auto-fit content mode - 헤더 위치를 방해하지 않도록 개선 */
+        .chat-container.auto-fit-content {
+            aspect-ratio: unset !important;
+            height: auto !important;
+            width: 100%;
+            max-width: none;
+            max-height: none;
+            overflow-y: visible !important;
+            position: relative;
+        }
+
+        /* auto-fit 모드에서도 preview-container의 기본 구조 유지 */
+        .preview-container.auto-fit-mode {
+            /* height와 overflow를 제거하여 레이아웃 안정성 확보 */
+        }
+
+        .preview-container.auto-fit-mode .chat-container {
+            padding-bottom: 20px; /* 하단 여백 확보 */
+        }
+
+        /* Custom width for auto-fit mode */
+        .chat-container.auto-fit-content.custom-width {
+            max-width: var(--custom-width);
+            margin: 0 auto; /* 중앙 정렬 */
+        }
+
+        .preview-container.auto-fit-mode.custom-width {
+            display: flex;
+            justify-content: center; /* 컨테이너 중앙 정렬 */
+        }
+
+        /* Formatting Toolbar */
+        .format-toolbar {
+            position: fixed;
+            background: white;
+            border: 2px solid #4267b2;
+            border-radius: 8px;
+            padding: 8px;
+            display: none;
+            gap: 4px;
+            z-index: 1000;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        .format-toolbar.active {
+            display: flex;
+        }
+
+        .format-btn {
+            width: 32px;
+            height: 32px;
+            border: 1px solid #dddfe2;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .format-btn:hover {
+            background: #f0f2f5;
+            border-color: #8b9dc3;
+        }
+
+        .format-btn.active {
+            background: #4267b2;
+            color: white;
+            border-color: #4267b2;
+        }
+
+        .color-picker {
+            width: 32px;
+            height: 32px;
+            border: 1px solid #dddfe2;
+            border-radius: 6px;
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .color-picker input[type="color"] {
+            width: 100%;
+            height: 100%;
+            border: none;
+            cursor: pointer;
+        }
+
+        /* Text Selection Highlight */
+        .selected-text {
+            background: rgba(66, 103, 178, 0.2);
+            border-radius: 2px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr;
+            }
+            
+            .controls-panel {
+                height: auto;
+                max-height: 40vh;
+                order: 1;
+            }
+            
+            .preview-container {
+                order: 2;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 8px;
+            }
+            
+            .container {
+                height: calc(100vh - 16px);
+            }
+            
+            .main-layout {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+            
+            .header {
+                padding: 12px 16px;
+                margin-bottom: 8px;
+            }
+            
+            .header h1 {
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>코코포리아 채팅 로그 변환</h1>
+            <div class="header-actions">
+                <button class="header-action-btn" onclick="applySettings()" title="미리보기 새로고침">
+                    ✨ 새로고침
+                </button>
+                <button class="header-action-btn secondary" onclick="copyToClipboard()" title="이미지를 클립보드로 복사">
+                    📋 복사
+                </button>
+                <button class="header-action-btn secondary" onclick="downloadAsImage()" title="이미지로 저장">
+                    📸 저장
+                </button>
+            </div>
+        </div>
+
+        <div class="main-layout">
+            <div class="controls-panel">
+                <div class="control-section">
+                    <div class="section-title">파일 설정</div>
+                    
+                    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                        <div class="file-input-wrapper" style="flex: 1;">
+                            <label for="fileInput" class="btn-secondary" style="margin: 0; font-size: 12px; padding: 8px 12px; text-align: center; cursor: pointer;">
+                                📁 파일 선택
+                            </label>
+                            <input type="file" id="fileInput" accept=".json">
+                        </div>
+                        <button class="btn-secondary" onclick="loadFromClipboard()" style="flex: 1; font-size: 12px; padding: 8px 12px; margin: 0;">
+                            📋 클립보드
+                        </button>
+                    </div>
+                    
+                    <div class="file-status" id="fileStatus">
+                        파일이 로드되었습니다
+                    </div>
+
+                    <div class="stats-grid" id="statsGrid" style="display: none;">
+                        <div class="stat-item">
+                            <div class="stat-label">총 메시지</div>
+                            <div class="stat-value" id="totalMessages">0</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">참여자</div>
+                            <div class="stat-value" id="totalCharacters">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <div class="section-title">디자인 설정</div>
+                    
+                    <label for="theme">테마 선택</label>
+                    <select id="theme">
+                        <option value="cocofolia">🎭 코코포리아 (기본)</option>
+                        <option value="discord">💬 디스코드 스타일</option>
+                        <option value="twitter">🐦 트위터 스타일</option>
+                    </select>
+
+                    <label for="aspectRatio">화면 비율</label>
+                    <select id="aspectRatio">
+                        <option value="full">전체 페이지</option>
+                        <option value="square">1:1 정사각형</option>
+                        <option value="9-16">9:16 세로형</option>
+                        <option value="4-5">4:5 인스타그램</option>
+                    </select>
+
+                    <label>
+                        <input type="checkbox" id="autoFitContent" onchange="applySettings()">
+                        📐 자동 맞춤 (메시지 전체 표시)
+                    </label>
+
+                    <div id="autoFitWidthSection" style="display: none;">
+                        <label for="autoFitWidth">가로 크기 (픽셀)</label>
+                        <input type="number" id="autoFitWidth" min="200" max="1920" value="600" onchange="applySettings()" placeholder="600">
+                        <div style="font-size: 11px; color: #65676b; margin-top: 4px;">
+                            권장: 600-800px (SNS 공유용)
+                        </div>
+                    </div>
+
+                    <label for="messageLimit">표시할 메시지 수</label>
+                    <input type="number" id="messageLimit" min="1" max="100" value="8">
+                    
+                    <label for="fontSize">폰트 크기</label>
+                    <select id="fontSize">
+                        <option value="small">🔸 작게</option>
+                        <option value="medium" >🔸 보통</option>
+                        <option value="large" selected>🔸 크게</option>
+                        <option value="extra-large">🔸 매우 크게</option>
+                    </select>
+                    
+                    <label for="avatarSize">캐릭터 토큰 크기</label>
+                    <select id="avatarSize">
+                        <option value="small">🔵 작게 (28px)</option>
+                        <option value="medium" selected>🔵 보통 (36px)</option>
+                        <option value="large">🔵 크게 (44px)</option>
+                        <option value="extra-large">🔵 매우 크게 (52px)</option>
+                    </select>
+                    
+                    <label>
+                        <input type="checkbox" id="showTimestamp" checked>
+                        🕐 타임스탬프 표시
+                    </label>
+                </div>
+
+                <div class="control-section">
+                    <div class="section-title">단색 블럭 설정</div>
+                    
+                    <label for="defaultBlockColor">기본 블럭 색상</label>
+                    <input type="color" id="defaultBlockColor" value="#f0f2f5">
+                    
+                    <label for="defaultBlockOpacity">기본 투명도 (%)</label>
+                    <input type="number" id="defaultBlockOpacity" min="0" max="100" value="80">
+                </div>
+
+
+                <div class="control-section">
+                    <div class="section-title">이름 일괄 변경</div>
+                    <div id="nameChangeList" style="margin-bottom: 12px;">
+                        <!-- 동적으로 생성됨 -->
+                    </div>
+                    <button class="btn-secondary" onclick="resetNames()" style="width: 100%; margin-top: 8px;">
+                        ↺ 원래 이름으로 복원
+                    </button>
+                </div>
+
+            </div>
+
+            <div class="preview-container">
+                <div class="preview-header">
+                    <div class="preview-info">
+                        <span>미리보기</span>
+                        <span class="preview-badge" id="previewBadge">테마: 코코포리아</span>
+                    </div>
+                    <div class="pagination-controls">
+                        <button class="pagination-btn" id="prevPageBtn" onclick="previousPage()" title="이전 페이지">‹</button>
+                        <div class="page-info" id="pageInfo">1 / 1</div>
+                        <button class="pagination-btn" id="nextPageBtn" onclick="nextPage()" title="다음 페이지">›</button>
+                    </div>
+                </div>
+                <div class="chat-container theme-cocofolia aspect-full" id="chatContainer">
+                    <div style="text-align: center; padding: 80px 20px; color: #8b9dc3; cursor: pointer;" onclick="handleContainerClick()">
+                        <div style="font-size: 48px; margin-bottom: 16px;">📁</div>
+                        <div style="font-size: 16px; font-weight: 500; color: #65676b;">JSON 파일을 불러와주세요</div>
+                        <div style="font-size: 14px; color: #8b9dc3; margin-top: 8px;">코코포리아 채팅 기록 파일을 선택해주세요</div>
+                        <div style="font-size: 12px; color: #4267b2; margin-top: 12px; font-weight: 500;">📋 또는 클립보드에서 가져오려면 여기를 클릭하세요</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formatting Toolbar -->
+    <div id="formatToolbar" class="format-toolbar">
+        <button class="format-btn" onclick="applyFormat('bold')" title="굵게">
+            <strong>B</strong>
+        </button>
+        <button class="format-btn" onclick="applyFormat('italic')" title="기울임">
+            <em>I</em>
+        </button>
+        <div class="color-picker" title="색상 변경">
+            <input type="color" id="textColorPicker" onchange="applyColorFormat(this.value)">
+        </div>
+        <button class="format-btn" onclick="applyFormat('mosaic')" title="모자이크">
+            🔳
+        </button>
+        <button class="format-btn" onclick="applyFormat('blind')" title="블라인드">
+            ⬛
+        </button>
+        <button class="format-btn" onclick="applyFormat('center')" title="가운데 정렬">
+            ≡
+        </button>
+        <button class="format-btn" onclick="clearFormat()" title="서식 제거">
+            ✕
+        </button>
+    </div>
+
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script>
+        let chatData = null;
+        let originalChatData = null;
+        let nameMapping = {};
+        let originalNameMapping = {};
+        let addMessagePanels = {};
+        let selectedText = null;
+        let selectedRange = null;
+        let currentEditingElement = null;
+        let currentPage = 1;
+        let totalPages = 1;
+
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    try {
+                        chatData = JSON.parse(event.target.result);
+                        originalChatData = JSON.parse(event.target.result); // Keep original copy
+                        
+                        // Update file status
+                        const fileStatus = document.getElementById('fileStatus');
+                        fileStatus.classList.add('active');
+                        fileStatus.textContent = `✅ ${file.name} 로드 완료`;
+                        
+                        // Update stats
+                        const statsGrid = document.getElementById('statsGrid');
+                        statsGrid.style.display = 'grid';
+                        
+                        document.getElementById('totalMessages').textContent = chatData.messages.length;
+                        
+                        // Count unique characters and create name mapping
+                        const uniqueCharacters = [...new Set(chatData.messages
+                            .filter(m => m.characterName !== 'Unknown' && m.characterName !== 'PL 웃')
+                            .map(m => m.characterName))];
+                        document.getElementById('totalCharacters').textContent = uniqueCharacters.length;
+                        
+                        // Create name change controls
+                        createNameChangeControls(uniqueCharacters);
+                        
+                        // Reset pagination when new file is loaded
+                        resetPagination();
+                        renderMessages();
+                    } catch (error) {
+                        alert('JSON 파일을 읽을 수 없습니다.');
+                        console.error(error);
+                    }
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        function createNameChangeControls(characters) {
+            const container = document.getElementById('nameChangeList');
+            container.innerHTML = '';
+            
+            characters.forEach(char => {
+                const item = document.createElement('div');
+                item.className = 'name-change-item';
+                item.innerHTML = `
+                    <div class="original-name" title="${char}">${char}</div>
+                    <span>→</span>
+                    <input type="text" 
+                           placeholder="새 이름" 
+                           data-original="${char}"
+                           value="${nameMapping[char] || ''}"
+                           onchange="updateNameMapping(this)">
+                `;
+                container.appendChild(item);
+            });
+            
+            // Initialize name mapping
+            characters.forEach(char => {
+                if (!nameMapping[char]) {
+                    originalNameMapping[char] = char;
+                }
+            });
+        }
+
+        function updateNameMapping(input) {
+            const original = input.dataset.original;
+            const newName = input.value.trim();
+            
+            if (newName) {
+                nameMapping[original] = newName;
+            } else {
+                delete nameMapping[original];
+            }
+            
+            // Apply name changes to data
+            applyNameChanges();
+            renderMessages();
+        }
+
+        function applyNameChanges() {
+            if (!originalChatData) return;
+            
+            // Reset to original data first
+            chatData = JSON.parse(JSON.stringify(originalChatData));
+            
+            // Apply name mappings
+            chatData.messages.forEach(msg => {
+                if (nameMapping[msg.characterName]) {
+                    msg.characterName = nameMapping[msg.characterName];
+                }
+            });
+        }
+
+        function resetNames() {
+            nameMapping = {};
+            
+            // Reset all inputs
+            const inputs = document.querySelectorAll('#nameChangeList input');
+            inputs.forEach(input => {
+                input.value = '';
+            });
+            
+            // Reset data
+            if (originalChatData) {
+                chatData = JSON.parse(JSON.stringify(originalChatData));
+                renderMessages();
+            }
+        }
+
+        function deleteMessage(index) {
+            if (chatData && chatData.messages) {
+                chatData.messages.splice(index, 1);
+                
+                // Check if current page is still valid after deletion
+                const limit = parseInt(document.getElementById('messageLimit').value);
+                const newTotalPages = Math.ceil(chatData.messages.length / limit);
+                if (currentPage > newTotalPages && newTotalPages > 0) {
+                    currentPage = newTotalPages;
+                }
+                
+                renderMessages();
+                
+                // Update stats
+                document.getElementById('totalMessages').textContent = chatData.messages.length;
+            }
+        }
+
+        function duplicateMessage(index) {
+            if (chatData && chatData.messages) {
+                const messageToDuplicate = JSON.parse(JSON.stringify(chatData.messages[index]));
+                chatData.messages.splice(index + 1, 0, messageToDuplicate);
+                renderMessages();
+                
+                // Update stats
+                document.getElementById('totalMessages').textContent = chatData.messages.length;
+            }
+        }
+
+        function showAddMessagePanel(index) {
+            const panelId = `add-panel-${index}`;
+            addMessagePanels[panelId] = true;
+            renderMessages();
+        }
+
+        function hideAddMessagePanel(index) {
+            const panelId = `add-panel-${index}`;
+            delete addMessagePanels[panelId];
+            renderMessages();
+        }
+
+        function addNewMessage(index, type) {
+            const nameInput = document.getElementById(`add-name-${index}`);
+            const contentInput = document.getElementById(`add-content-${index}`);
+            
+            const newMessage = {
+                id: Date.now(),
+                characterName: type === 'system' ? 'Unknown' : (nameInput.value.trim() || '새 캐릭터'),
+                content: contentInput.value.trim() || '새 메시지',
+                time: new Date().toLocaleString(),
+                nameColor: type === 'system' ? 'rgb(158, 158, 158)' : 'rgb(107, 166, 255)',
+                timestamp: Date.now()
+            };
+            
+            if (type === 'character') {
+                // Get unique characters for avatar
+                const uniqueChars = [...new Set(chatData.messages
+                    .filter(m => m.characterName !== 'Unknown' && m.characterName !== 'PL 웃')
+                    .map(m => m.characterName))];
+                
+                // Copy avatar from existing character if name matches
+                const existingChar = chatData.messages.find(m => m.characterName === newMessage.characterName);
+                if (existingChar && existingChar.avatar) {
+                    newMessage.avatar = existingChar.avatar;
+                }
+            }
+            
+            chatData.messages.splice(index + 1, 0, newMessage);
+            hideAddMessagePanel(index);
+            
+            // Update stats
+            document.getElementById('totalMessages').textContent = chatData.messages.length;
+        }
+
+        document.getElementById('theme').addEventListener('change', updatePreviewBadge);
+        document.getElementById('aspectRatio').addEventListener('change', applySettings);
+        document.getElementById('fontSize').addEventListener('change', applySettings);
+        document.getElementById('avatarSize').addEventListener('change', applySettings);
+        document.getElementById('showTimestamp').addEventListener('change', applySettings);
+        document.getElementById('messageLimit').addEventListener('change', function() {
+            resetPagination();
+            renderMessages();
+        });
+        
+        function updatePreviewBadge() {
+            const theme = document.getElementById('theme').value;
+            const badge = document.getElementById('previewBadge');
+            const themeNames = {
+                'cocofolia': '테마: 코코포리아',
+                'discord': '테마: 디스코드',
+                'twitter': '테마: 트위터'
+            };
+            badge.textContent = themeNames[theme];
+        }
+
+        function applySettings() {
+            const theme = document.getElementById('theme').value;
+            const aspectRatio = document.getElementById('aspectRatio').value;
+            const fontSize = document.getElementById('fontSize').value;
+            const avatarSize = document.getElementById('avatarSize').value;
+            const showTimestamp = document.getElementById('showTimestamp').checked;
+            const autoFitContent = document.getElementById('autoFitContent').checked;
+            const autoFitWidth = document.getElementById('autoFitWidth').value;
+            const container = document.getElementById('chatContainer');
+            const previewContainer = container.closest('.preview-container');
+            
+            // Remove all theme, aspect ratio, font size, avatar size, and timestamp classes
+            container.className = container.className.replace(/theme-\S+/g, '');
+            container.className = container.className.replace(/aspect-\S+/g, '');
+            container.className = container.className.replace(/font-\S+/g, '');
+            container.className = container.className.replace(/avatar-\S+/g, '');
+            container.classList.remove('hide-timestamp');
+            container.classList.remove('auto-fit-content');
+            container.classList.remove('custom-width');
+            previewContainer.classList.remove('auto-fit-mode');
+            previewContainer.classList.remove('custom-width');
+            
+            // Add new classes
+            container.classList.add('chat-container');
+            container.classList.add(`theme-${theme}`);
+            container.classList.add(`font-${fontSize}`);
+            container.classList.add(`avatar-${avatarSize}`);
+            
+            // Add timestamp visibility class
+            if (!showTimestamp) {
+                container.classList.add('hide-timestamp');
+            }
+            
+            // Show/hide auto-fit width section
+            const autoFitWidthSection = document.getElementById('autoFitWidthSection');
+            if (autoFitContent) {
+                autoFitWidthSection.style.display = 'block';
+            } else {
+                autoFitWidthSection.style.display = 'none';
+            }
+            
+            // Apply auto-fit or aspect ratio
+            if (autoFitContent) {
+                // Auto-fit mode: show all messages without scrolling
+                container.classList.add('auto-fit-content');
+                previewContainer.classList.add('auto-fit-mode');
+                
+                // Apply custom width if specified
+                if (autoFitWidth && autoFitWidth > 0) {
+                    container.classList.add('custom-width');
+                    previewContainer.classList.add('custom-width');
+                    container.style.setProperty('--custom-width', autoFitWidth + 'px');
+                }
+                
+                // Disable aspect ratio select when auto-fit is on
+                document.getElementById('aspectRatio').disabled = true;
+            } else {
+                // Normal aspect ratio mode
+                container.classList.add(`aspect-${aspectRatio}`);
+                document.getElementById('aspectRatio').disabled = false;
+                
+                // Manage preview container class for aspect modes
+                if (aspectRatio === 'full') {
+                    previewContainer.classList.remove('aspect-mode');
+                } else {
+                    previewContainer.classList.add('aspect-mode');
+                }
+            }
+            
+            updatePreviewBadge();
+            renderMessages();
+        }
+
+        function makeEditableWithFormatting(element, messageIndex, field) {
+            element.contentEditable = true;
+            element.focus();
+            
+            // Select all text
+            const range = document.createRange();
+            range.selectNodeContents(element);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            
+            // Save original value
+            const originalValue = element.textContent;
+            
+            // Handle blur (save)
+            element.onblur = function() {
+                element.contentEditable = false;
+                let newValue = element.textContent.trim();
+                
+                // Remove '[편집 완료]' text automatically
+                newValue = newValue.replace(/\[편집\s*완료\]/gi, '').trim();
+                
+                if (newValue !== originalValue && chatData) {
+                    // Handle nested properties like 'colorBlocks.0.content'
+                    if (field.includes('.')) {
+                        const fieldParts = field.split('.');
+                        let target = chatData.messages[messageIndex];
+                        
+                        for (let i = 0; i < fieldParts.length - 1; i++) {
+                            if (!target[fieldParts[i]]) {
+                                target[fieldParts[i]] = {};
+                            }
+                            target = target[fieldParts[i]];
+                        }
+                        
+                        target[fieldParts[fieldParts.length - 1]] = newValue;
+                    } else {
+                        chatData.messages[messageIndex][field] = newValue;
+                    }
+                    // Update the display without re-rendering
+                    element.textContent = newValue;
+                }
+            };
+            
+            // Handle enter key
+            element.onkeydown = function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    element.blur();
+                }
+                // Prevent newlines in names
+                if (field === 'characterName' && e.key === 'Enter') {
+                    e.preventDefault();
+                }
+            };
+        }
+
+        function renderMessages() {
+            if (!chatData) {
+                updatePaginationInfo();
+                return;
+            }
+            
+            const container = document.getElementById('chatContainer');
+            const theme = document.getElementById('theme').value;
+            const limit = parseInt(document.getElementById('messageLimit').value);
+            
+            // Update pagination info
+            updatePaginationInfo();
+            
+            container.innerHTML = '';
+            
+            
+            // Calculate which messages to show based on current page
+            const startIndex = (currentPage - 1) * limit;
+            const endIndex = startIndex + limit;
+            const messagesToShow = chatData.messages.slice(startIndex, endIndex);
+            
+            messagesToShow.forEach((msg, relativeIndex) => {
+                const actualIndex = startIndex + relativeIndex; // Real index in the full messages array
+                
+                // Add message panel if active
+                const panelId = `add-panel-${actualIndex}`;
+                if (addMessagePanels[panelId]) {
+                    const addPanel = document.createElement('div');
+                    addPanel.className = 'add-message-panel active';
+                    addPanel.innerHTML = `
+                        <div class="add-message-controls">
+                            <div class="add-message-type ${msg.characterName !== 'Unknown' ? 'selected' : ''}" 
+                                 onclick="this.classList.add('selected'); this.nextElementSibling.classList.remove('selected'); document.getElementById('add-name-${actualIndex}').disabled = false;">
+                                👤 캐릭터 메시지
+                            </div>
+                            <div class="add-message-type ${msg.characterName === 'Unknown' ? 'selected' : ''}"
+                                 onclick="this.classList.add('selected'); this.previousElementSibling.classList.remove('selected'); document.getElementById('add-name-${actualIndex}').disabled = true; document.getElementById('add-name-${actualIndex}').value = 'Unknown';">
+                                📢 시스템 메시지
+                            </div>
+                        </div>
+                        <div class="add-message-form">
+                            <input type="text" id="add-name-${actualIndex}" placeholder="캐릭터 이름" value="${msg.characterName !== 'Unknown' ? msg.characterName : ''}" ${msg.characterName === 'Unknown' ? 'disabled' : ''}>
+                            <textarea id="add-content-${actualIndex}" placeholder="메시지 내용"></textarea>
+                            <div class="add-message-actions">
+                                <button class="btn-primary" onclick="addNewMessage(${actualIndex}, document.getElementById('add-name-${actualIndex}').disabled ? 'system' : 'character')">추가</button>
+                                <button class="btn-secondary" onclick="hideAddMessagePanel(${actualIndex})">취소</button>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(addPanel);
+                }
+                
+                if (msg.characterName === 'Unknown' || msg.characterName === 'PL 웃') {
+                    // System message
+                    const systemMsg = document.createElement('div');
+                    systemMsg.className = 'system-message';
+                    systemMsg.innerHTML = `
+                        <span class="editable-text" onclick="makeEditableWithFormatting(this, ${actualIndex}, 'content')">${msg.content}</span>
+                        <div class="message-controls">
+                            <button class="message-control-btn move-up" onclick="moveMessageUp(${actualIndex})" title="위로 이동" ${actualIndex === 0 ? 'disabled' : ''}>↑</button>
+                            <button class="message-control-btn move-down" onclick="moveMessageDown(${actualIndex})" title="아래로 이동" ${actualIndex === chatData.messages.length - 1 ? 'disabled' : ''}>↓</button>
+                            <button class="message-control-btn add" onclick="showAddMessagePanel(${actualIndex})" title="메시지 추가">+</button>
+                            <button class="message-control-btn duplicate" onclick="duplicateMessage(${actualIndex})" title="복제">⧉</button>
+                            <button class="message-control-btn delete" onclick="deleteMessage(${actualIndex})" title="삭제">×</button>
+                        </div>
+                    `;
+                    container.appendChild(systemMsg);
+                } else {
+                    const messageEl = document.createElement('div');
+                    messageEl.className = 'message';
+                    
+                    // Check if avatar image exists, otherwise use first letter
+                    let avatarContent;
+                    if (msg.avatar && msg.avatar !== 'https://ccfolia.com/blank.gif') {
+                        avatarContent = `<img src="${msg.avatar}" alt="${msg.characterName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+                    } else {
+                        avatarContent = msg.characterName[0] || '?';
+                    }
+                    
+                    const messageControls = `
+                        <div class="message-controls">
+                            <button class="message-control-btn move-up" onclick="moveMessageUp(${actualIndex})" title="위로 이동" ${actualIndex === 0 ? 'disabled' : ''}>↑</button>
+                            <button class="message-control-btn move-down" onclick="moveMessageDown(${actualIndex})" title="아래로 이동" ${actualIndex === chatData.messages.length - 1 ? 'disabled' : ''}>↓</button>
+                            <button class="message-control-btn add" onclick="showAddMessagePanel(${actualIndex})" title="메시지 추가">+</button>
+                            <button class="message-control-btn duplicate" onclick="duplicateMessage(${actualIndex})" title="복제">⧉</button>
+                            <button class="message-control-btn add-block" onclick="addColorBlock(${actualIndex})" title="단색 블럭 추가" style="background: #e8f5e9; color: #2e7d32;">■</button>
+                            <button class="message-control-btn delete" onclick="deleteMessage(${actualIndex})" title="삭제">×</button>
+                        </div>
+                    `;
+                    
+                    if (theme === 'cocofolia') {
+                        messageEl.innerHTML = `
+                            <div class="avatar">${avatarContent}</div>
+                            <div class="message-content">
+                                <div class="character-name editable-text" style="color: ${msg.nameColor}" onclick="makeEditableWithFormatting(this, ${actualIndex}, 'characterName')">${msg.characterName}</div>
+                                <div class="message-text editable-text" onclick="makeEditableWithFormatting(this, ${actualIndex}, 'content')">${msg.content}</div>
+                                <div class="timestamp">${msg.time}</div>
+                            </div>
+                            ${messageControls}
+                        `;
+                    } else if (theme === 'discord') {
+                        messageEl.innerHTML = `
+                            <div class="avatar">${avatarContent}</div>
+                            <div class="message-content">
+                                <div>
+                                    <span class="character-name editable-text" style="color: ${msg.nameColor}" onclick="makeEditableWithFormatting(this, ${actualIndex}, 'characterName')">${msg.characterName}</span>
+                                    <span class="timestamp">${msg.time}</span>
+                                </div>
+                                <div class="message-text editable-text" onclick="makeEditableWithFormatting(this, ${actualIndex}, 'content')">${msg.content}</div>
+                            </div>
+                            ${messageControls}
+                        `;
+                    } else if (theme === 'twitter') {
+                        messageEl.innerHTML = `
+                            <div class="avatar">${avatarContent}</div>
+                            <div class="message-content">
+                                <div class="message-header">
+                                    <span class="character-name editable-text" onclick="makeEditableWithFormatting(this, ${actualIndex}, 'characterName')">${msg.characterName}</span>
+                                    <span class="timestamp">${msg.time}</span>
+                                </div>
+                                <div class="message-text editable-text" onclick="makeEditableWithFormatting(this, ${actualIndex}, 'content')">${msg.content}</div>
+                            </div>
+                            ${messageControls}
+                        `;
+                    }
+                    
+                    container.appendChild(messageEl);
+                
+                // Add solid color blocks if they exist for this message
+                if (msg.colorBlocks && msg.colorBlocks.length > 0) {
+                    msg.colorBlocks.forEach((block, blockIndex) => {
+                        const blockEl = document.createElement('div');
+                        blockEl.className = 'solid-color-block';
+                        blockEl.style.backgroundColor = block.color;
+                        blockEl.style.opacity = block.opacity || 0.8;
+                        blockEl.innerHTML = `
+                            <div class="editable-text" onclick="makeEditableWithFormatting(this, ${actualIndex}, 'colorBlocks.${blockIndex}.content')" style="position: relative; z-index: 2;">${block.content || '단색 블럭입니다. 클릭해서 편집하세요.'}</div>
+                            <div class="block-controls">
+                                <button class="block-control-btn delete" onclick="deleteColorBlock(${actualIndex}, ${blockIndex})" title="블럭 삭제">×</button>
+                            </div>
+                        `;
+                        container.appendChild(blockEl);
+                    });
+                }
+                }
+            });
+            
+            
+            // Hide notice after a few seconds
+            setTimeout(() => {
+                const noticeEl = container.querySelector('.edit-mode-notice');
+                if (noticeEl) {
+                    noticeEl.classList.remove('active');
+                }
+            }, 3000);
+        }
+
+        async function copyToClipboard() {
+            const container = document.getElementById('chatContainer');
+            const copyButton = document.querySelector('[onclick="copyToClipboard()"]');
+            const autoFitEnabled = document.getElementById('autoFitContent').checked;
+            
+            try {
+                // Hide edit controls
+                const notice = container.querySelector('.edit-mode-notice');
+                const controls = container.querySelectorAll('.message-controls, .block-controls');
+                const addPanels = container.querySelectorAll('.add-message-panel');
+                
+                if (notice) notice.style.display = 'none';
+                controls.forEach(c => c.style.display = 'none');
+                addPanels.forEach(p => p.style.display = 'none');
+                
+                // 촬영할 정확한 영역 계산
+                let targetElement = container;
+                let canvasOptions = {
+                    backgroundColor: null,
+                    scale: 2,
+                    logging: false,
+                    useCORS: true,
+                    allowTaint: true
+                };
+                
+                if (autoFitEnabled) {
+                    // 자동 맞춤 모드에서는 실제 콘텐츠 높이만 촬영
+                    const messages = container.querySelectorAll('.message, .system-message');
+                    if (messages.length > 0) {
+                        const lastMessage = messages[messages.length - 1];
+                        const containerRect = container.getBoundingClientRect();
+                        const lastMessageRect = lastMessage.getBoundingClientRect();
+                        const contentHeight = lastMessageRect.bottom - containerRect.top + 20; // 20px 여백
+                        
+                        canvasOptions.height = contentHeight;
+                        canvasOptions.windowHeight = contentHeight;
+                    }
+                }
+                
+                // Create canvas and convert to blob
+                const canvas = await html2canvas(targetElement, canvasOptions);
+                
+                // Convert canvas to blob
+                const blob = await new Promise(resolve => {
+                    canvas.toBlob(resolve, 'image/png');
+                });
+                
+                // Copy to clipboard
+                await navigator.clipboard.write([
+                    new ClipboardItem({
+                        'image/png': blob
+                    })
+                ]);
+                
+                // Show success feedback
+                const originalText = copyButton.textContent;
+                const originalBg = copyButton.style.background;
+                copyButton.textContent = '✅ 복사됨!';
+                copyButton.style.background = 'linear-gradient(135deg, #28a745 0%, #218838 100%)';
+                
+                setTimeout(() => {
+                    copyButton.textContent = originalText;
+                    copyButton.style.background = originalBg;
+                }, 2000);
+                
+                // Restore visibility
+                if (notice) notice.style.display = '';
+                controls.forEach(c => c.style.display = '');
+                addPanels.forEach(p => p.style.display = '');
+                
+            } catch (error) {
+                console.error('클립보드 복사 실패:', error);
+                alert('클립보드 복사에 실패했습니다.');
+                
+                // Restore visibility
+                const notice = container.querySelector('.edit-mode-notice');
+                const controls = container.querySelectorAll('.message-controls, .block-controls');
+                const addPanels = container.querySelectorAll('.add-message-panel');
+                
+                if (notice) notice.style.display = '';
+                controls.forEach(c => c.style.display = '');
+                addPanels.forEach(p => p.style.display = '');
+            }
+        }
+
+        function downloadAsImage() {
+            const container = document.getElementById('chatContainer');
+            const autoFitEnabled = document.getElementById('autoFitContent').checked;
+            
+            // Hide edit controls
+            const notice = container.querySelector('.edit-mode-notice');
+            const controls = container.querySelectorAll('.message-controls, .block-controls');
+            const addPanels = container.querySelectorAll('.add-message-panel');
+            
+            if (notice) notice.style.display = 'none';
+            controls.forEach(c => c.style.display = 'none');
+            addPanels.forEach(p => p.style.display = 'none');
+            
+            let targetElement = container;
+            let canvasOptions = {
+                backgroundColor: null,
+                scale: 2,
+                logging: false,
+                useCORS: true
+            };
+            
+            if (autoFitEnabled) {
+                // 자동 맞춤 모드에서는 실제 콘텐츠 높이만 촬영
+                const messages = container.querySelectorAll('.message, .system-message');
+                if (messages.length > 0) {
+                    const lastMessage = messages[messages.length - 1];
+                    const containerRect = container.getBoundingClientRect();
+                    const lastMessageRect = lastMessage.getBoundingClientRect();
+                    const contentHeight = lastMessageRect.bottom - containerRect.top + 20; // 20px 여백
+                    
+                    canvasOptions.height = contentHeight;
+                    canvasOptions.windowHeight = contentHeight;
+                }
+            }
+            
+            html2canvas(targetElement, canvasOptions).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `trpg-chat-${Date.now()}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+                
+                // Restore visibility
+                if (notice) notice.style.display = '';
+                controls.forEach(c => c.style.display = '');
+                addPanels.forEach(p => p.style.display = '');
+            });
+        }
+
+
+        // Text Formatting Functions
+        function showFormatToolbar(x, y) {
+            const toolbar = document.getElementById('formatToolbar');
+            toolbar.style.left = x + 'px';
+            toolbar.style.top = (y - 50) + 'px';
+            toolbar.classList.add('active');
+        }
+
+        function hideFormatToolbar() {
+            const toolbar = document.getElementById('formatToolbar');
+            toolbar.classList.remove('active');
+        }
+
+        function applyFormat(type) {
+            if (!selectedRange || !currentEditingElement) return;
+
+            const selection = window.getSelection();
+            const selectedText = selectedRange.toString();
+            
+            if (selectedText.length === 0) return;
+
+            // Create a span element with the appropriate class
+            const span = document.createElement('span');
+            span.className = `text-${type}`;
+            span.textContent = selectedText;
+
+            // Replace the selected text with the formatted span
+            selectedRange.deleteContents();
+            selectedRange.insertNode(span);
+
+            // Clear selection and hide toolbar
+            selection.removeAllRanges();
+            hideFormatToolbar();
+            
+            // Update the chat data
+            updateChatDataFromElement(currentEditingElement);
+        }
+
+        function applyColorFormat(color) {
+            if (!selectedRange || !currentEditingElement) return;
+
+            const selection = window.getSelection();
+            const selectedText = selectedRange.toString();
+            
+            if (selectedText.length === 0) return;
+
+            // Create a span element with the color style
+            const span = document.createElement('span');
+            span.style.color = color;
+            span.textContent = selectedText;
+
+            // Replace the selected text with the colored span
+            selectedRange.deleteContents();
+            selectedRange.insertNode(span);
+
+            // Clear selection and hide toolbar
+            selection.removeAllRanges();
+            hideFormatToolbar();
+            
+            // Update the chat data
+            updateChatDataFromElement(currentEditingElement);
+        }
+
+        function clearFormat() {
+            if (!selectedRange || !currentEditingElement) return;
+
+            const selection = window.getSelection();
+            const selectedText = selectedRange.toString();
+            
+            if (selectedText.length === 0) return;
+
+            // Replace with plain text
+            const textNode = document.createTextNode(selectedText);
+            selectedRange.deleteContents();
+            selectedRange.insertNode(textNode);
+
+            // Clear selection and hide toolbar
+            selection.removeAllRanges();
+            hideFormatToolbar();
+            
+            // Update the chat data
+            updateChatDataFromElement(currentEditingElement);
+        }
+
+        function updateChatDataFromElement(element) {
+            const messageIndex = element.dataset.messageIndex;
+            const field = element.dataset.field;
+            
+            if (chatData && messageIndex !== undefined && field) {
+                chatData.messages[messageIndex][field] = element.innerHTML;
+            }
+        }
+
+        // Event listeners for text selection
+        document.addEventListener('mouseup', function(e) {
+            const selection = window.getSelection();
+            const selectedText = selection.toString().trim();
+            
+            if (selectedText.length > 0) {
+                const range = selection.getRangeAt(0);
+                const rect = range.getBoundingClientRect();
+                
+                // Check if selection is within an editable element
+                let editableElement = range.commonAncestorContainer;
+                while (editableElement && editableElement.nodeType !== 1) {
+                    editableElement = editableElement.parentNode;
+                }
+                
+                if (editableElement && editableElement.classList && editableElement.classList.contains('editable-text')) {
+                    selectedRange = range;
+                    currentEditingElement = editableElement;
+                    showFormatToolbar(rect.left + rect.width / 2, rect.top);
+                } else {
+                    hideFormatToolbar();
+                }
+            } else {
+                hideFormatToolbar();
+            }
+        });
+
+        // Hide toolbar when clicking elsewhere
+        document.addEventListener('mousedown', function(e) {
+            if (!e.target.closest('#formatToolbar') && !e.target.closest('.editable-text')) {
+                hideFormatToolbar();
+            }
+        });
+
+        // Updated makeEditableWithFormatting function to support formatting
+        function makeEditableWithFormattingWithFormatting(element, messageIndex, field) {
+            element.contentEditable = true;
+            element.dataset.messageIndex = messageIndex;
+            element.dataset.field = field;
+            element.focus();
+            
+            // Select all text
+            const range = document.createRange();
+            range.selectNodeContents(element);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            
+            // Save original value
+            const originalValue = element.innerHTML;
+            
+            // Handle blur (save)
+            element.onblur = function() {
+                element.contentEditable = false;
+                const newValue = element.innerHTML.trim();
+                
+                if (newValue !== originalValue && chatData) {
+                    chatData.messages[messageIndex][field] = newValue;
+                }
+                
+                // Clean up
+                delete element.dataset.messageIndex;
+                delete element.dataset.field;
+                hideFormatToolbar();
+            };
+            
+            // Handle enter key
+            element.onkeydown = function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    element.blur();
+                }
+                // Prevent newlines in names
+                if (field === 'characterName' && e.key === 'Enter') {
+                    e.preventDefault();
+                }
+            };
+        }
+
+        // Pagination Functions
+        function updatePaginationInfo() {
+            if (!chatData || !chatData.messages) {
+                totalPages = 1;
+                currentPage = 1;
+                document.getElementById('pageInfo').textContent = '1 / 1';
+                document.getElementById('prevPageBtn').disabled = true;
+                document.getElementById('nextPageBtn').disabled = true;
+                return;
+            }
+
+            const limit = parseInt(document.getElementById('messageLimit').value);
+            totalPages = Math.ceil(chatData.messages.length / limit);
+            
+            // Ensure current page is within bounds
+            if (currentPage > totalPages) {
+                currentPage = totalPages;
+            }
+            if (currentPage < 1) {
+                currentPage = 1;
+            }
+
+            document.getElementById('pageInfo').textContent = `${currentPage} / ${totalPages}`;
+            document.getElementById('prevPageBtn').disabled = currentPage <= 1;
+            document.getElementById('nextPageBtn').disabled = currentPage >= totalPages;
+        }
+
+        function previousPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                updatePaginationInfo();
+                renderMessages();
+            }
+        }
+
+        function nextPage() {
+            if (currentPage < totalPages) {
+                currentPage++;
+                updatePaginationInfo();
+                renderMessages();
+            }
+        }
+
+        function resetPagination() {
+            currentPage = 1;
+            updatePaginationInfo();
+        }
+
+
+        // Move specific message up (swap with previous message)
+        function moveMessageUp(index) {
+            if (!chatData || !chatData.messages || index <= 0) return;
+            
+            // Swap with previous message
+            const temp = chatData.messages[index];
+            chatData.messages[index] = chatData.messages[index - 1];
+            chatData.messages[index - 1] = temp;
+            
+            renderMessages();
+        }
+
+        // Move specific message down (swap with next message)
+        function moveMessageDown(index) {
+            if (!chatData || !chatData.messages || index >= chatData.messages.length - 1) return;
+            
+            // Swap with next message
+            const temp = chatData.messages[index];
+            chatData.messages[index] = chatData.messages[index + 1];
+            chatData.messages[index + 1] = temp;
+            
+            renderMessages();
+        }
+
+
+        // Color Block Functions
+        function addColorBlock(messageIndex) {
+            if (!chatData || !chatData.messages[messageIndex]) return;
+            
+            const defaultColor = document.getElementById('defaultBlockColor').value;
+            const defaultOpacity = document.getElementById('defaultBlockOpacity').value / 100;
+            
+            if (!chatData.messages[messageIndex].colorBlocks) {
+                chatData.messages[messageIndex].colorBlocks = [];
+            }
+            
+            chatData.messages[messageIndex].colorBlocks.push({
+                color: defaultColor,
+                opacity: defaultOpacity,
+                content: ''
+            });
+            
+            renderMessages();
+        }
+        
+        function deleteColorBlock(messageIndex, blockIndex) {
+            if (!chatData || !chatData.messages[messageIndex] || !chatData.messages[messageIndex].colorBlocks) return;
+            
+            chatData.messages[messageIndex].colorBlocks.splice(blockIndex, 1);
+            
+            // Remove colorBlocks array if empty
+            if (chatData.messages[messageIndex].colorBlocks.length === 0) {
+                delete chatData.messages[messageIndex].colorBlocks;
+            }
+            
+            renderMessages();
+        }
+        
+        // Enhanced makeEditableWithFormatting to handle nested properties
+        function makeEditableWithFormattingNested(element, messageIndex, field) {
+            element.contentEditable = true;
+            element.focus();
+            
+            // Select all text
+            const range = document.createRange();
+            range.selectNodeContents(element);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            
+            // Save original value
+            const originalValue = element.textContent;
+            
+            // Handle blur (save)
+            element.onblur = function() {
+                element.contentEditable = false;
+                const newValue = element.textContent.trim();
+                
+                if (newValue !== originalValue && chatData) {
+                    // Handle nested properties like 'colorBlocks.0.content'
+                    const fieldParts = field.split('.');
+                    let target = chatData.messages[messageIndex];
+                    
+                    for (let i = 0; i < fieldParts.length - 1; i++) {
+                        if (!target[fieldParts[i]]) {
+                            target[fieldParts[i]] = {};
+                        }
+                        target = target[fieldParts[i]];
+                    }
+                    
+                    target[fieldParts[fieldParts.length - 1]] = newValue;
+                }
+            };
+            
+            // Handle enter key
+            element.onkeydown = function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    element.blur();
+                }
+            };
+        }
+
+        // Load from clipboard button function
+        async function loadFromClipboard() {
+            // Only allow clipboard reading when no data is loaded
+            if (chatData) {
+                alert('이미 데이터가 로드되어 있습니다. 새로고침 후 다시 시도해주세요.');
+                return;
+            }
+            
+            try {
+                // Show loading state in file status
+                const fileStatus = document.getElementById('fileStatus');
+                fileStatus.classList.add('active');
+                fileStatus.textContent = '🔄 클립보드에서 읽는 중...';
+                fileStatus.style.background = '#fff3cd';
+                fileStatus.style.borderColor = '#ffeeba';
+                fileStatus.style.color = '#856404';
+                
+                // Request clipboard permission and read text
+                const clipboardText = await navigator.clipboard.readText();
+                
+                if (!clipboardText.trim()) {
+                    throw new Error('클립보드가 비어있습니다.');
+                }
+                
+                // Try to parse as JSON
+                let parsedData;
+                try {
+                    parsedData = JSON.parse(clipboardText);
+                } catch (parseError) {
+                    throw new Error('유효한 JSON 형식이 아닙니다.');
+                }
+                
+                // Validate structure
+                if (!parsedData.messages || !Array.isArray(parsedData.messages)) {
+                    throw new Error('올바른 코코포리아 채팅 기록 형식이 아닙니다.');
+                }
+                
+                // Success - process the data
+                await processClipboardData(parsedData);
+                
+            } catch (error) {
+                // Show error in file status
+                const fileStatus = document.getElementById('fileStatus');
+                fileStatus.classList.add('active');
+                fileStatus.textContent = `❌ ${error.message}`;
+                fileStatus.style.background = '#f8d7da';
+                fileStatus.style.borderColor = '#f5c6cb';
+                fileStatus.style.color = '#721c24';
+                
+                // Auto-hide error after 3 seconds
+                setTimeout(() => {
+                    fileStatus.classList.remove('active');
+                    fileStatus.style.background = '';
+                    fileStatus.style.borderColor = '';
+                    fileStatus.style.color = '';
+                }, 3000);
+            }
+        }
+
+        // Clipboard functionality
+        async function handleContainerClick() {
+            // Only allow clipboard reading when no data is loaded
+            if (chatData) return;
+            
+            try {
+                // Show loading state
+                const container = document.getElementById('chatContainer');
+                const originalContent = container.innerHTML;
+                
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 80px 20px; color: #8b9dc3;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">🔄</div>
+                        <div style="font-size: 16px; font-weight: 500; color: #65676b;">클립보드에서 읽는 중...</div>
+                    </div>
+                `;
+                
+                // Request clipboard permission and read text
+                const clipboardText = await navigator.clipboard.readText();
+                
+                if (!clipboardText.trim()) {
+                    throw new Error('클립보드가 비어있습니다.');
+                }
+                
+                // Try to parse as JSON
+                let parsedData;
+                try {
+                    parsedData = JSON.parse(clipboardText);
+                } catch (parseError) {
+                    throw new Error('유효한 JSON 형식이 아닙니다.');
+                }
+                
+                // Validate structure
+                if (!parsedData.messages || !Array.isArray(parsedData.messages)) {
+                    throw new Error('올바른 코코포리아 채팅 기록 형식이 아닙니다.');
+                }
+                
+                // Success - process the data
+                await processClipboardData(parsedData);
+                
+            } catch (error) {
+                // Show error state
+                const container = document.getElementById('chatContainer');
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 80px 20px; color: #8b9dc3; cursor: pointer;" onclick="handleContainerClick()">
+                        <div style="font-size: 48px; margin-bottom: 16px;">❌</div>
+                        <div style="font-size: 16px; font-weight: 500; color: #c62828;">${error.message}</div>
+                        <div style="font-size: 14px; color: #8b9dc3; margin-top: 8px;">다시 시도하려면 클릭하세요</div>
+                        <div style="font-size: 12px; color: #4267b2; margin-top: 12px; font-weight: 500;">📋 또는 파일을 선택해주세요</div>
+                    </div>
+                `;
+                
+                // Auto-restore after 3 seconds
+                setTimeout(() => {
+                    if (!chatData) {
+                        container.innerHTML = `
+                            <div style="text-align: center; padding: 80px 20px; color: #8b9dc3; cursor: pointer;" onclick="handleContainerClick()">
+                                <div style="font-size: 48px; margin-bottom: 16px;">📁</div>
+                                <div style="font-size: 16px; font-weight: 500; color: #65676b;">JSON 파일을 불러와주세요</div>
+                                <div style="font-size: 14px; color: #8b9dc3; margin-top: 8px;">코코포리아 채팅 기록 파일을 선택해주세요</div>
+                                <div style="font-size: 12px; color: #4267b2; margin-top: 12px; font-weight: 500;">📋 또는 클립보드에서 가져오려면 여기를 클릭하세요</div>
+                            </div>
+                        `;
+                    }
+                }, 3000);
+            }
+        }
+        
+        async function processClipboardData(parsedData) {
+            // Use the same logic as file input
+            chatData = parsedData;
+            originalChatData = JSON.parse(JSON.stringify(parsedData)); // Deep copy
+            
+            // Update file status
+            const fileStatus = document.getElementById('fileStatus');
+            fileStatus.classList.add('active');
+            fileStatus.textContent = '✅ 클립보드에서 로드 완료';
+            fileStatus.style.background = '#d4edda';
+            fileStatus.style.borderColor = '#c3e6cb';
+            fileStatus.style.color = '#155724';
+            
+            // Update stats
+            const statsGrid = document.getElementById('statsGrid');
+            statsGrid.style.display = 'grid';
+            
+            document.getElementById('totalMessages').textContent = chatData.messages.length;
+            
+            // Count unique characters and create name mapping
+            const uniqueCharacters = [...new Set(chatData.messages
+                .filter(m => m.characterName !== 'Unknown' && m.characterName !== 'PL 웃')
+                .map(m => m.characterName))];
+            document.getElementById('totalCharacters').textContent = uniqueCharacters.length;
+            
+            // Create name change controls
+            createNameChangeControls(uniqueCharacters);
+            
+            // Reset pagination when new data is loaded
+            resetPagination();
+            renderMessages();
+        }
+
+        // Initialize
+        applySettings();
+    </script>
+</body>
+</html>
