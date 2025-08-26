@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>북카드 생성기</title>
+    <link rel="stylesheet" href="bookcard.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- 헤더 네비게이션 -->
+        <header class="header">
+            <div class="header-left">
+                <div class="app-title">
+                    <h1>코코포리아</h1>
+                    <span class="app-subtitle">TRPG 도구 모음</span>
+                </div>
+                <div class="nav-tabs">
+                    <a href="index.html" class="nav-tab">
+                        <span class="tab-icon">💬</span>
+                        <span>채팅 변환</span>
+                    </a>
+                    <a href="bookcard.html" class="nav-tab active">
+                        <span class="tab-icon">📚</span>
+                        <span>북카드 생성</span>
+                    </a>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="header-action-btn" onclick="saveProject()" title="프로젝트 저장">
+                    <span class="btn-icon">💾</span>
+                    <span>저장</span>
+                </button>
+                <button class="header-action-btn secondary" onclick="loadProject()" title="프로젝트 불러오기">
+                    <span class="btn-icon">📂</span>
+                    <span>불러오기</span>
+                </button>
+            </div>
+        </header>
+
+        <div class="main-layout">
+            <!-- 왼쪽: 텍스트 블록 사이드바 -->
+            <div class="text-sidebar" id="textSidebar">
+                <div class="sidebar-header">
+                    <h3>텍스트 블록</h3>
+                    <div class="sidebar-controls">
+                        <span class="badge" id="messageCount">0</span>
+                        <button class="btn-toggle-sidebar" onclick="toggleTextSidebar()" title="사이드바 접기/펼치기">
+                            <span>◀</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="sidebar-content">
+                    <!-- 데이터 입력 섹션 -->
+                    <div class="input-section">
+                        <div class="input-tabs">
+                            <button class="input-tab active" onclick="switchInputTab('file')">파일</button>
+                            <button class="input-tab" onclick="switchInputTab('text')">텍스트</button>
+                            <button class="input-tab" onclick="switchInputTab('clipboard')">클립보드</button>
+                        </div>
+                        
+                        <div class="input-content" id="fileInputContent">
+                            <input type="file" id="jsonFile" accept=".json" onchange="loadFromFile(event)" hidden>
+                            <label for="jsonFile" class="file-drop-zone">
+                                <span>📁</span>
+                                <p>JSON 파일 선택</p>
+                            </label>
+                        </div>
+                        
+                        <div class="input-content" id="textInputContent" style="display:none;">
+                            <textarea id="jsonText" placeholder='{"messages": [...]}' rows="3"></textarea>
+                            <button class="btn btn-primary btn-sm" onclick="loadFromText()">로드</button>
+                        </div>
+                        
+                        <div class="input-content" id="clipboardInputContent" style="display:none;">
+                            <button class="btn btn-primary btn-sm" onclick="loadFromClipboard()">
+                                <span>📋</span> 클립보드에서 가져오기
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 텍스트 블록 리스트 -->
+                    <div class="text-blocks-section">
+                        <div class="block-actions">
+                            <button class="btn btn-sm" onclick="selectAllBlocks()">전체 선택</button>
+                            <button class="btn btn-sm" onclick="clearBlockSelection()">선택 해제</button>
+                        </div>
+                        
+                        <div class="text-blocks-container" id="textBlocks">
+                            <div class="empty-message">데이터를 로드하면 텍스트가 표시됩니다</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 중앙: 카드 작업 영역 -->
+            <div class="workspace">
+                <div class="workspace-header">
+                    <div class="zoom-controls">
+                        <button onclick="zoomOut()">−</button>
+                        <span id="zoomLevel">100%</span>
+                        <button onclick="zoomIn()">+</button>
+                        <button onclick="resetZoom()">맞춤</button>
+                    </div>
+                    <div class="export-controls">
+                        <button class="btn btn-primary" onclick="exportCard()">
+                            <span>📸</span> 현재 카드 저장
+                        </button>
+                        <button class="btn btn-secondary" onclick="copyCardToClipboard()">
+                            <span>📋</span> 클립보드 복사
+                        </button>
+                        <button class="btn" onclick="exportAllCards()">
+                            <span>📦</span> 모든 카드 저장
+                        </button>
+                    </div>
+                </div>
+
+                <div class="canvas-container">
+                    <div class="card-canvas" id="cardCanvas">
+                        <div class="empty-state">
+                            <p>+ 버튼을 클릭하여 새 카드를 만드세요</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 카드 페이지네이션 -->
+                    <div class="card-pagination">
+                        <button onclick="previousCard()">◀</button>
+                        <span id="cardInfo">0 / 0</span>
+                        <button onclick="nextCard()">▶</button>
+                        <button class="btn-add-card" onclick="addNewCard()">+ 새 카드</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 오른쪽: 컨트롤 패널 -->
+            <div class="control-panel">
+                <!-- 카드 설정 -->
+                <div class="panel-section">
+                    <div class="section-header">
+                        <h3>카드 설정</h3>
+                    </div>
+                    <div class="section-content">
+                        <!-- 템플릿 설정 -->
+                        <div class="control-group">
+                            <label>카드 템플릿</label>
+                            <div class="template-grid">
+                                <button class="template-btn active" onclick="setCardTemplate('default')">기본</button>
+                                <button class="template-btn" onclick="setCardTemplate('readwise')">Readwise</button>
+                                <button class="template-btn" onclick="setCardTemplate('ridibooks')">리디북스</button>
+                                <button class="template-btn" onclick="setCardTemplate('kindle')">Kindle</button>
+                                <button class="template-btn" onclick="setCardTemplate('notion')">Notion</button>
+                                <button class="template-btn" onclick="setCardTemplate('pinterest')">Pinterest</button>
+                            </div>
+                        </div>
+
+                        <!-- 카드 크기 -->
+                        <div class="control-group">
+                            <label>카드 크기 (픽셀)</label>
+                            <div class="size-grid">
+                                <button class="size-btn active" onclick="setCardSize(400, 600)">북카드 기본<br><small>400×600</small></button>
+                                <button class="size-btn" onclick="setCardSize(320, 480)">북카드 소형<br><small>320×480</small></button>
+                                <button class="size-btn" onclick="setCardSize(500, 750)">북카드 중형<br><small>500×750</small></button>
+                                <button class="size-btn" onclick="setCardSize(600, 900)">북카드 대형<br><small>600×900</small></button>
+                                <button class="size-btn" onclick="setCardSize(800, 800)">정사각형<br><small>800×800</small></button>
+                                <button class="size-btn" onclick="setCardSize('custom', 'custom')">커스텀</button>
+                            </div>
+                            <div id="customSize" style="display:none; margin-top: 12px;">
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <input type="number" id="customWidth" placeholder="가로" min="200" max="4000" value="400">
+                                    <span>×</span>
+                                    <input type="number" id="customHeight" placeholder="세로" min="200" max="4000" value="600">
+                                    <button class="btn btn-sm" onclick="applyCustomSize()">적용</button>
+                                </div>
+                                <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">
+                                    권장: 400×600 (기본), 500×750 (고화질)
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 텍스트 스타일 -->
+                        <div class="control-group">
+                            <label>텍스트 스타일</label>
+                            
+                            <div class="style-row">
+                                <label>폰트</label>
+                                <select id="fontFamily" onchange="updateTextStyle()">
+                                    <option value="'Noto Sans KR', sans-serif">고딕</option>
+                                    <option value="'Noto Serif KR', serif">명조</option>
+                                    <option value="'Nanum Pen Script', cursive">손글씨</option>
+                                    <option value="'Courier New', monospace">고정폭</option>
+                                    <option value="'Georgia', serif">Georgia</option>
+                                </select>
+                            </div>
+                            
+                            <div class="style-row">
+                                <label>크기</label>
+                                <input type="range" id="fontSize" min="10" max="48" value="16" onchange="updateTextStyle()">
+                                <span id="fontSizeValue">16px</span>
+                            </div>
+                            
+                            <div class="style-row">
+                                <label>색상</label>
+                                <input type="color" id="textColor" value="#000000" onchange="updateTextStyle()">
+                            </div>
+                            
+                            <div class="style-row">
+                                <label>정렬</label>
+                                <div class="align-buttons">
+                                    <button class="align-btn" onclick="setTextAlign('left')">◀</button>
+                                    <button class="align-btn active" onclick="setTextAlign('center')">■</button>
+                                    <button class="align-btn" onclick="setTextAlign('right')">▶</button>
+                                </div>
+                            </div>
+                            
+                            <div class="style-row">
+                                <label>줄 간격</label>
+                                <input type="range" id="lineHeight" min="1" max="3" step="0.1" value="1.6" onchange="updateTextStyle()">
+                            </div>
+                        </div>
+
+                        <!-- 배경 설정 -->
+                        <div class="control-group">
+                            <label>배경</label>
+                            <div class="bg-tabs">
+                                <button class="bg-tab active" onclick="switchBgType('solid')">단색</button>
+                                <button class="bg-tab" onclick="switchBgType('gradient')">그라데이션</button>
+                                <button class="bg-tab" onclick="switchBgType('image')">이미지</button>
+                                <button class="bg-tab" onclick="switchBgType('pattern')">패턴</button>
+                            </div>
+                            
+                            <div class="bg-content" id="bgSolid">
+                                <input type="color" id="bgColor" value="#ffffff" onchange="updateBackground()">
+                            </div>
+                            
+                            <div class="bg-content" id="bgGradient" style="display:none;">
+                                <input type="color" id="gradColor1" value="#667eea" onchange="updateBackground()">
+                                <input type="color" id="gradColor2" value="#764ba2" onchange="updateBackground()">
+                                <select id="gradAngle" onchange="updateBackground()">
+                                    <option value="0">위에서 아래</option>
+                                    <option value="45">대각선</option>
+                                    <option value="90">왼쪽에서 오른쪽</option>
+                                    <option value="180">아래에서 위</option>
+                                </select>
+                            </div>
+                            
+                            <div class="bg-content" id="bgImage" style="display:none;">
+                                <input type="file" id="bgImageFile" accept="image/*" onchange="loadBackgroundImage(event)">
+                                <input type="text" id="bgImageUrl" placeholder="이미지 URL" onchange="updateBackground()">
+                                <div class="image-options">
+                                    <label>
+                                        <input type="checkbox" id="bgOverlay" onchange="updateBackground()">
+                                        어두운 오버레이
+                                    </label>
+                                    <label>
+                                        블러: <input type="range" id="bgBlur" min="0" max="10" value="0" onchange="updateBackground()">
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-content" id="bgPattern" style="display:none;">
+                                <select id="patternType" onchange="updateBackground()">
+                                    <option value="dots">도트</option>
+                                    <option value="lines">줄무늬</option>
+                                    <option value="grid">격자</option>
+                                    <option value="zigzag">지그재그</option>
+                                </select>
+                                <input type="color" id="patternColor" value="#e0e0e0" onchange="updateBackground()">
+                            </div>
+                        </div>
+
+                        <!-- 여백 설정 -->
+                        <div class="control-group">
+                            <label>여백</label>
+                            <input type="range" id="cardPadding" min="10" max="80" value="40" onchange="updateCardPadding()">
+                            <span id="paddingValue">40px</span>
+                        </div>
+                    </div>
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+
+    <!-- 카드 템플릿 (숨김) -->
+    <div id="cardTemplate" style="display:none;">
+        <div class="book-card" data-card-id="">
+            <div class="card-background"></div>
+            <div class="card-content">
+                <div class="card-text" contenteditable="true">
+                    클릭하여 텍스트를 입력하세요
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="card-title" contenteditable="true">제목</div>
+                <div class="card-author" contenteditable="true">작성자</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script src="bookcard.js"></script>
+</body>
+</html>
