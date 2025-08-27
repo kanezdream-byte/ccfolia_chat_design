@@ -80,6 +80,14 @@
                         </div>
                     </div>
                     
+                    <!-- 카드 제목 설정 -->
+                    <div class="title-section">
+                        <div class="title-input-group">
+                            <label for="cardTitleInput">카드 제목</label>
+                            <input type="text" id="cardTitleInput" placeholder="카드 제목을 입력하세요" onchange="updateCardTitle()" value="제목" class="title-input">
+                        </div>
+                    </div>
+
                     <!-- 텍스트 블록 리스트 -->
                     <div class="text-blocks-section">
                         <div class="block-actions">
@@ -129,6 +137,13 @@
                         <span id="cardInfo">0 / 0</span>
                         <button onclick="nextCard()">▶</button>
                         <button class="btn-add-card" onclick="addNewCard()">+ 새 카드</button>
+                        <div class="pagination-separator"></div>
+                        <button class="btn btn-danger" onclick="removeCurrentCard()">
+                            <span>🗑️</span> 현재 카드 삭제
+                        </button>
+                        <button class="btn btn-danger-outline" onclick="clearAllCards()">
+                            <span>🧹</span> 전체 초기화
+                        </button>
                     </div>
                 </div>
             </div>
@@ -147,10 +162,8 @@
                             <div class="template-grid">
                                 <button class="template-btn active" onclick="setCardTemplate('default')">기본</button>
                                 <button class="template-btn" onclick="setCardTemplate('readwise')">Readwise</button>
-                                <button class="template-btn" onclick="setCardTemplate('ridibooks')">리디북스</button>
                                 <button class="template-btn" onclick="setCardTemplate('kindle')">Kindle</button>
                                 <button class="template-btn" onclick="setCardTemplate('notion')">Notion</button>
-                                <button class="template-btn" onclick="setCardTemplate('pinterest')">Pinterest</button>
                             </div>
                         </div>
 
@@ -160,9 +173,7 @@
                             <div class="size-grid">
                                 <button class="size-btn active" onclick="setCardSize(400, 600)">북카드 기본<br><small>400×600</small></button>
                                 <button class="size-btn" onclick="setCardSize(320, 480)">북카드 소형<br><small>320×480</small></button>
-                                <button class="size-btn" onclick="setCardSize(500, 750)">북카드 중형<br><small>500×750</small></button>
-                                <button class="size-btn" onclick="setCardSize(600, 900)">북카드 대형<br><small>600×900</small></button>
-                                <button class="size-btn" onclick="setCardSize(800, 800)">정사각형<br><small>800×800</small></button>
+                                <button class="size-btn" onclick="setCardSize(500, 500)">정사각형<br><small>500×500</small></button>
                                 <button class="size-btn" onclick="setCardSize('custom', 'custom')">커스텀</button>
                             </div>
                             <div id="customSize" style="display:none; margin-top: 12px;">

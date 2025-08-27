@@ -42,19 +42,43 @@
         </div>
 
         <div class="main-layout">
+            <div class="preview-container">
+                <div class="preview-header">
+                    <div class="preview-info">
+                        <span>미리보기</span>
+                        <span class="preview-badge" id="previewBadge">테마: 코코포리아</span>
+                    </div>
+                    <div class="pagination-controls">
+                        <button class="pagination-btn" id="prevPageBtn" onclick="previousPage()" title="이전 페이지">‹</button>
+                        <div class="page-info" id="pageInfo">1 / 1</div>
+                        <button class="pagination-btn" id="nextPageBtn" onclick="nextPage()" title="다음 페이지">›</button>
+                    </div>
+                </div>
+                <div class="chat-container theme-cocofolia aspect-full" id="chatContainer">
+                    <div style="text-align: center; padding: 80px 20px; color: #8b9dc3; cursor: pointer;" onclick="handleContainerClick()">
+                        <div style="font-size: 48px; margin-bottom: 16px;">📁</div>
+                        <div style="font-size: 16px; font-weight: 500; color: #65676b;">JSON 파일을 불러와주세요</div>
+                        <div style="font-size: 14px; color: #8b9dc3; margin-top: 8px;">코코포리아 채팅 기록 파일을 선택해주세요</div>
+                        <div style="font-size: 12px; color: #4267b2; margin-top: 12px; font-weight: 500;">📋 또는 클립보드에서 가져오려면 여기를 클릭하세요</div>
+                    </div>
+                </div>
+            </div>
+
             <div class="controls-panel">
                 <div class="control-section">
                     <div class="section-title">파일 설정</div>
                     
-                    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-                        <div class="file-input-wrapper" style="flex: 1;">
-                            <label for="fileInput" class="btn-secondary" style="margin: 0; font-size: 12px; padding: 8px 12px; text-align: center; cursor: pointer;">
-                                📁 파일 선택
+                    <div class="file-controls">
+                        <div class="file-input-wrapper">
+                            <label for="fileInput" class="btn-secondary">
+                                <span class="btn-icon">📁</span>
+                                <span>파일 선택</span>
                             </label>
                             <input type="file" id="fileInput" accept=".json">
                         </div>
-                        <button class="btn-secondary" onclick="loadFromClipboard()" style="flex: 1; font-size: 12px; padding: 8px 12px; margin: 0;">
-                            📋 클립보드
+                        <button class="btn-secondary" onclick="loadFromClipboard()">
+                            <span class="btn-icon">📋</span>
+                            <span>클립보드</span>
                         </button>
                     </div>
                     
@@ -94,7 +118,7 @@
 
                     <label>
                         <input type="checkbox" id="autoFitContent" onchange="applySettings()">
-                        📐 자동 맞춤 (메시지 전체 표시)
+                        자동 맞춤
                     </label>
 
                     <div id="autoFitWidthSection" style="display: none;">
@@ -110,23 +134,23 @@
                     
                     <label for="fontSize">폰트 크기</label>
                     <select id="fontSize">
-                        <option value="small">🔸 작게</option>
-                        <option value="medium" >🔸 보통</option>
-                        <option value="large" selected>🔸 크게</option>
-                        <option value="extra-large">🔸 매우 크게</option>
+                        <option value="small">작게</option>
+                        <option value="medium">보통</option>
+                        <option value="large" selected>크게</option>
+                        <option value="extra-large">매우 크게</option>
                     </select>
                     
-                    <label for="avatarSize">캐릭터 토큰 크기</label>
+                    <label for="avatarSize">토큰 크기</label>
                     <select id="avatarSize">
-                        <option value="small">🔵 작게 (28px)</option>
-                        <option value="medium" selected>🔵 보통 (36px)</option>
-                        <option value="large">🔵 크게 (44px)</option>
-                        <option value="extra-large">🔵 매우 크게 (52px)</option>
+                        <option value="small">작게</option>
+                        <option value="medium" selected>보통</option>
+                        <option value="large">크게</option>
+                        <option value="extra-large">매우 크게</option>
                     </select>
                     
                     <label>
                         <input type="checkbox" id="showTimestamp" checked>
-                        🕐 타임스탬프 표시
+                        타임스탬프 표시
                     </label>
                 </div>
 
@@ -151,28 +175,6 @@
                     </button>
                 </div>
 
-            </div>
-
-            <div class="preview-container">
-                <div class="preview-header">
-                    <div class="preview-info">
-                        <span>미리보기</span>
-                        <span class="preview-badge" id="previewBadge">테마: 코코포리아</span>
-                    </div>
-                    <div class="pagination-controls">
-                        <button class="pagination-btn" id="prevPageBtn" onclick="previousPage()" title="이전 페이지">‹</button>
-                        <div class="page-info" id="pageInfo">1 / 1</div>
-                        <button class="pagination-btn" id="nextPageBtn" onclick="nextPage()" title="다음 페이지">›</button>
-                    </div>
-                </div>
-                <div class="chat-container theme-cocofolia aspect-full" id="chatContainer">
-                    <div style="text-align: center; padding: 80px 20px; color: #8b9dc3; cursor: pointer;" onclick="handleContainerClick()">
-                        <div style="font-size: 48px; margin-bottom: 16px;">📁</div>
-                        <div style="font-size: 16px; font-weight: 500; color: #65676b;">JSON 파일을 불러와주세요</div>
-                        <div style="font-size: 14px; color: #8b9dc3; margin-top: 8px;">코코포리아 채팅 기록 파일을 선택해주세요</div>
-                        <div style="font-size: 12px; color: #4267b2; margin-top: 12px; font-weight: 500;">📋 또는 클립보드에서 가져오려면 여기를 클릭하세요</div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>

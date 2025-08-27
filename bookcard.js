@@ -311,17 +311,14 @@ function renderCard(card) {
         formattedContent = formattedContent.replace(/\n/g, '<br>');
     }
     
-    // 템플릿별 스타일 오버라이드 없이 기본 스타일만 적용
-    let textStyle = '';
-    if (template === 'default') {
-        textStyle = `
-            font-family: ${card.textStyle.fontFamily};
-            font-size: ${card.textStyle.fontSize}px;
-            color: ${card.textStyle.color};
-            text-align: ${card.textStyle.align};
-            line-height: ${card.textStyle.lineHeight};
-        `;
-    }
+    // 모든 템플릿에 사용자 텍스트 스타일 적용 (템플릿 고유 스타일과 병합)
+    let textStyle = `
+        font-family: ${card.textStyle.fontFamily} !important;
+        font-size: ${card.textStyle.fontSize}px !important;
+        color: ${card.textStyle.color} !important;
+        text-align: ${card.textStyle.align} !important;
+        line-height: ${card.textStyle.lineHeight} !important;
+    `;
     
     // 패딩 설정 (템플릿별로 다르게 처리)
     let contentPadding = template === 'default' ? `${card.padding}px` : '';
@@ -331,7 +328,7 @@ function renderCard(card) {
         <div class="card-content" ${contentPadding ? `style="padding: ${contentPadding};"` : ''}>
             <div class="card-text" 
                  contenteditable="true"
-                 ${textStyle ? `style="${textStyle}"` : ''}
+                 style="${textStyle}"
                  onblur="updateCardContent('${card.id}', this.innerHTML)">
                 ${formattedContent}
             </div>
@@ -553,10 +550,40 @@ function updateCardPadding() {
 const TEMPLATE_SIZES = {
     'default': { width: 400, height: 600 },
     'readwise': { width: 500, height: 700 },
-    'ridibooks': { width: 400, height: 600 },
     'kindle': { width: 450, height: 650 },
-    'notion': { width: 500, height: 750 },
-    'pinterest': { width: 400, height: 600 }
+    'notion': { width: 400, height: 600 }
+};
+
+// 템플릿별 권장 폰트 설정 정의
+const TEMPLATE_FONTS = {
+    'default': {
+        fontFamily: "'Noto Sans KR', sans-serif",
+        fontSize: 16,
+        color: '#000000',
+        align: 'center',
+        lineHeight: 1.6
+    },
+    'readwise': {
+        fontFamily: "'Crimson Text', Georgia, serif",
+        fontSize: 24,
+        color: '#2C2C2C',
+        align: 'center',
+        lineHeight: 1.6
+    },
+    'kindle': {
+        fontFamily: "'Bookerly', 'Palatino', serif",
+        fontSize: 18,
+        color: '#1a1a1a',
+        align: 'left',
+        lineHeight: 1.7
+    },
+    'notion': {
+        fontFamily: "'Noto Sans KR', sans-serif",
+        fontSize: 16,
+        color: '#2d3748',
+        align: 'left',
+        lineHeight: 1.6
+    }
 };
 
 // 카드 크기 설정 함수
@@ -666,12 +693,20 @@ function setCardTemplate(template) {
     if (current) {
         current.template = template;
         
-        // 템플릿별 권장 사이즈 적용 (선택사항)
+        // 템플릿별 권장 사이즈 자동 적용
         const recommendedSize = TEMPLATE_SIZES[template];
-        if (recommendedSize && confirm(`${template} 템플릿의 권장 사이즈(${recommendedSize.width}×${recommendedSize.height}px)로 변경하시겠습니까?`)) {
+        if (recommendedSize) {
             current.size = { ...recommendedSize };
             AppState.currentCardSize = { ...recommendedSize };
             updateSizeButtonState(recommendedSize.width, recommendedSize.height);
+        }
+        
+        // 템플릿별 권장 폰트 설정 자동 적용
+        const recommendedFont = TEMPLATE_FONTS[template];
+        if (recommendedFont) {
+            current.textStyle = { ...recommendedFont };
+            AppState.textStyle = { ...recommendedFont };
+            updateFontControlsUI();
         }
         
         renderCard(current);
@@ -1652,4 +1687,109 @@ function splitTextIntoMultipleCards(card) {
     
     showNotification('텍스트를 2개의 카드로 분할했습니다.', 'success');
     updateCardInfo();
+}
+
+// 카드 삭제 관련 함수들
+function removeCurrentCard() {
+    if (AppState.cards.length === 0) {
+        showNotification('삭제할 카드가 없습니다.', 'info');
+        return;
+    }
+    
+    if (confirm('현재 카드를 삭제하시겠습니까?')) {
+        // 현재 카드 삭제
+        AppState.cards.splice(AppState.currentCardIndex, 1);
+        
+        // 인덱스 조정
+        if (AppState.currentCardIndex >= AppState.cards.length && AppState.cards.length > 0) {
+            AppState.currentCardIndex = AppState.cards.length - 1;
+        }
+        
+        // UI 업데이트
+        if (AppState.cards.length > 0) {
+            renderCard(AppState.cards[AppState.currentCardIndex]);
+            updateCardInfo();
+        } else {
+            // 카드가 모두 없으면 빈 상태 표시
+            AppState.currentCardIndex = 0;
+            const canvas = document.getElementById('cardCanvas');
+            canvas.innerHTML = '<div class="empty-state"><p>+ 버튼을 클릭하여 새 카드를 만드세요</p></div>';
+            updateCardInfo();
+        }
+        
+        // 세션 저장
+        saveSession();
+        showNotification('카드가 삭제되었습니다.', 'success');
+    }
+}
+
+function clearAllCards() {
+    if (AppState.cards.length === 0) {
+        showNotification('삭제할 카드가 없습니다.', 'info');
+        return;
+    }
+    
+    if (confirm(`모든 카드(${AppState.cards.length}개)를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) {
+        // 모든 카드 삭제
+        AppState.cards = [];
+        AppState.currentCardIndex = 0;
+        
+        // UI 초기화
+        const canvas = document.getElementById('cardCanvas');
+        canvas.innerHTML = '<div class="empty-state"><p>+ 버튼을 클릭하여 새 카드를 만드세요</p></div>';
+        updateCardInfo();
+        
+        // 텍스트 블록 선택도 초기화
+        clearBlockSelection();
+        
+        // 세션 저장
+        saveSession();
+        showNotification('모든 카드가 삭제되었습니다.', 'success');
+    }
+}
+
+// 제목 업데이트 함수
+function updateCardTitle() {
+    const titleInput = document.getElementById('cardTitleInput');
+    const newTitle = titleInput.value.trim();
+    
+    if (!newTitle) {
+        showNotification('카드 제목을 입력해주세요.', 'error');
+        titleInput.value = '제목';
+        return;
+    }
+    
+    const current = AppState.cards[AppState.currentCardIndex];
+    if (current) {
+        current.title = newTitle;
+        
+        // 화면에 표시된 카드의 제목도 업데이트
+        const cardTitleElement = document.querySelector('.card-title');
+        if (cardTitleElement) {
+            cardTitleElement.textContent = newTitle;
+        }
+        
+        saveSession();
+        showNotification('카드 제목이 업데이트되었습니다.', 'success');
+    }
+}
+
+// 폰트 컨트롤 UI 업데이트 함수
+function updateFontControlsUI() {
+    const fontFamily = document.getElementById('fontFamily');
+    const fontSize = document.getElementById('fontSize');
+    const fontSizeValue = document.getElementById('fontSizeValue');
+    const textColor = document.getElementById('textColor');
+    const lineHeight = document.getElementById('lineHeight');
+    
+    if (fontFamily) fontFamily.value = AppState.textStyle.fontFamily;
+    if (fontSize) fontSize.value = AppState.textStyle.fontSize;
+    if (fontSizeValue) fontSizeValue.textContent = `${AppState.textStyle.fontSize}px`;
+    if (textColor) textColor.value = AppState.textStyle.color;
+    if (lineHeight) lineHeight.value = AppState.textStyle.lineHeight;
+    
+    // 텍스트 정렬 버튼 업데이트
+    document.querySelectorAll('.align-btn').forEach(btn => btn.classList.remove('active'));
+    const alignBtn = document.querySelector(`.align-btn[onclick*="${AppState.textStyle.align}"]`);
+    if (alignBtn) alignBtn.classList.add('active');
 }
