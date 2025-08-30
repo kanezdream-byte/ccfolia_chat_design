@@ -52,22 +52,34 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
 
 function createNameChangeControls(characters) {
     const container = document.getElementById('nameChangeList');
+    const emptyState = document.getElementById('emptyState');
+    const characterCountBadge = document.getElementById('characterCountBadge');
+    
     container.innerHTML = '';
     
-    characters.forEach(char => {
-        const item = document.createElement('div');
-        item.className = 'name-change-item';
-        item.innerHTML = `
-            <div class="original-name" title="${char}">${char}</div>
-            <span>→</span>
-            <input type="text" 
-                   placeholder="새 이름" 
-                   data-original="${char}"
-                   value="${nameMapping[char] || ''}"
-                   onchange="updateNameMapping(this)">
-        `;
-        container.appendChild(item);
-    });
+    if (characters.length === 0) {
+        emptyState.style.display = 'flex';
+        characterCountBadge.style.display = 'none';
+    } else {
+        emptyState.style.display = 'none';
+        characterCountBadge.style.display = 'inline-block';
+        characterCountBadge.textContent = characters.length;
+        
+        characters.forEach(char => {
+            const item = document.createElement('div');
+            item.className = 'name-change-item';
+            item.innerHTML = `
+                <div class="original-name" title="${char}">${char}</div>
+                <span>→</span>
+                <input type="text" 
+                       placeholder="새 이름" 
+                       data-original="${char}"
+                       value="${nameMapping[char] || ''}"
+                       onchange="updateNameMapping(this)">
+            `;
+            container.appendChild(item);
+        });
+    }
     
     // Initialize name mapping
     characters.forEach(char => {
@@ -418,11 +430,30 @@ function renderMessages() {
             const messageEl = document.createElement('div');
             messageEl.className = 'message';
             
-            // Check if avatar image exists, otherwise use first letter
+            // Generate avatar content based on avatar data
             let avatarContent;
-            if (msg.avatar && msg.avatar !== 'https://ccfolia.com/blank.gif') {
-                avatarContent = `<img src="${msg.avatar}" alt="${msg.characterName}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+            let avatarStyle = '';
+            
+            if (msg.avatarType && msg.avatarData) {
+                switch (msg.avatarType) {
+                    case 'image':
+                        avatarContent = `<img src="${msg.avatarData}" alt="${msg.characterName}" style="width: 100%; height: 100%; object-fit: cover;">`;
+                        break;
+                    case 'url':
+                        avatarContent = `<img src="${msg.avatarData}" alt="${msg.characterName}" style="width: 100%; height: 100%; object-fit: cover;">`;
+                        break;
+                    case 'color':
+                        avatarContent = msg.characterName[0] || '?';
+                        avatarStyle = `background-color: ${msg.avatarData}; color: white;`;
+                        break;
+                    default:
+                        avatarContent = msg.characterName[0] || '?';
+                }
+            } else if (msg.avatar && msg.avatar !== 'https://ccfolia.com/blank.gif') {
+                // Legacy avatar support
+                avatarContent = `<img src="${msg.avatar}" alt="${msg.characterName}" style="width: 100%; height: 100%; object-fit: cover;">`;
             } else {
+                // Default: first letter
                 avatarContent = msg.characterName[0] || '?';
             }
             
@@ -439,7 +470,7 @@ function renderMessages() {
             
             if (theme === 'cocofolia') {
                 messageEl.innerHTML = `
-                    <div class="avatar">${avatarContent}</div>
+                    <div class="avatar clickable" style="${avatarStyle}" onclick="openAvatarModal('${msg.characterName.replace(/'/g, "\\'")}') " title="이미지 변경">${avatarContent}</div>
                     <div class="message-content">
                         <div class="character-name editable-text" style="color: ${msg.nameColor}" onclick="makeEditableWithFormatting(this, ${actualIndex}, 'characterName')">${msg.characterName}</div>
                         <div class="message-text editable-text" onclick="makeEditableWithFormatting(this, ${actualIndex}, 'content')">${msg.content}</div>
@@ -449,7 +480,7 @@ function renderMessages() {
                 `;
             } else if (theme === 'discord') {
                 messageEl.innerHTML = `
-                    <div class="avatar">${avatarContent}</div>
+                    <div class="avatar clickable" style="${avatarStyle}" onclick="openAvatarModal('${msg.characterName.replace(/'/g, "\\'")}') " title="이미지 변경">${avatarContent}</div>
                     <div class="message-content">
                         <div>
                             <span class="character-name editable-text" style="color: ${msg.nameColor}" onclick="makeEditableWithFormatting(this, ${actualIndex}, 'characterName')">${msg.characterName}</span>
@@ -461,7 +492,7 @@ function renderMessages() {
                 `;
             } else if (theme === 'twitter') {
                 messageEl.innerHTML = `
-                    <div class="avatar">${avatarContent}</div>
+                    <div class="avatar clickable" style="${avatarStyle}" onclick="openAvatarModal('${msg.characterName.replace(/'/g, "\\'")}') " title="이미지 변경">${avatarContent}</div>
                     <div class="message-content">
                         <div class="message-header">
                             <span class="character-name editable-text" onclick="makeEditableWithFormatting(this, ${actualIndex}, 'characterName')">${msg.characterName}</span>
@@ -485,9 +516,20 @@ function renderMessages() {
                 blockEl.innerHTML = `
                     <div class="editable-text" onclick="makeEditableWithFormatting(this, ${actualIndex}, 'colorBlocks.${blockIndex}.content')" style="position: relative; z-index: 2;">${block.content || '단색 블럭입니다. 클릭해서 편집하세요.'}</div>
                     <div class="block-controls">
-                        <button class="block-control-btn delete" onclick="deleteColorBlock(${actualIndex}, ${blockIndex})" title="블럭 삭제">×</button>
+                        <button class="block-control-btn settings" onclick="event.stopPropagation(); selectColorBlock(this.closest('.solid-color-block'), ${actualIndex}, ${blockIndex})" title="블럭 설정">⚙</button>
+                        <button class="block-control-btn delete" onclick="event.stopPropagation(); deleteColorBlock(${actualIndex}, ${blockIndex})" title="블럭 삭제">×</button>
                     </div>
                 `;
+                
+                // Add click event to select the block
+                blockEl.addEventListener('click', function(e) {
+                    // Don't trigger if clicking on editable text or buttons
+                    if (e.target.classList.contains('editable-text') || e.target.classList.contains('block-control-btn')) {
+                        return;
+                    }
+                    selectColorBlock(this, actualIndex, blockIndex);
+                });
+                
                 container.appendChild(blockEl);
             });
         }
@@ -1121,6 +1163,354 @@ async function processClipboardData(parsedData) {
     resetPagination();
     renderMessages();
 }
+
+// Avatar change functionality
+let currentEditingCharacter = null;
+let currentEditingAvatarData = null;
+
+function openAvatarModal(characterName) {
+    currentEditingCharacter = characterName;
+    
+    // Set character name in modal
+    document.getElementById('currentCharacterName').textContent = characterName;
+    
+    // Find current avatar data for this character
+    const message = chatData.messages.find(m => m.characterName === characterName);
+    currentEditingAvatarData = message ? {
+        avatarType: message.avatarType || 'default',
+        avatarData: message.avatarData || null
+    } : { avatarType: 'default', avatarData: null };
+    
+    // Reset modal state
+    resetAvatarModal();
+    
+    // Show current avatar if exists
+    if (currentEditingAvatarData.avatarType && currentEditingAvatarData.avatarData) {
+        switch (currentEditingAvatarData.avatarType) {
+            case 'image':
+                switchAvatarTab('upload');
+                const uploadPreview = document.getElementById('avatarUploadPreview');
+                const uploadImg = document.getElementById('avatarUploadImg');
+                uploadImg.src = currentEditingAvatarData.avatarData;
+                uploadPreview.style.display = 'block';
+                break;
+            case 'url':
+                switchAvatarTab('url');
+                document.getElementById('avatarUrlInput').value = currentEditingAvatarData.avatarData;
+                loadAvatarFromUrl();
+                break;
+            case 'color':
+                switchAvatarTab('color');
+                document.getElementById('avatarColorInput').value = currentEditingAvatarData.avatarData;
+                handleAvatarColorChange();
+                break;
+        }
+    }
+    
+    // Show modal
+    const modal = document.getElementById('avatarChangeModal');
+    modal.classList.add('show');
+}
+
+function closeAvatarModal() {
+    const modal = document.getElementById('avatarChangeModal');
+    modal.classList.remove('show');
+    
+    // Reset state
+    currentEditingCharacter = null;
+    currentEditingAvatarData = null;
+    resetAvatarModal();
+}
+
+function resetAvatarModal() {
+    // Reset tabs
+    switchAvatarTab('upload');
+    
+    // Clear all inputs
+    document.getElementById('avatarFileInput').value = '';
+    document.getElementById('avatarUrlInput').value = '';
+    document.getElementById('avatarColorInput').value = '#4267b2';
+    
+    // Hide all previews
+    document.getElementById('avatarUploadPreview').style.display = 'none';
+    document.getElementById('avatarUrlPreview').style.display = 'none';
+    
+    // Reset color preview
+    document.getElementById('avatarColorSample').style.backgroundColor = '#4267b2';
+}
+
+function switchAvatarTab(tabName) {
+    // Remove active class from all tabs and contents
+    document.querySelectorAll('.avatar-tab').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.avatar-tab-content').forEach(content => content.classList.remove('active'));
+    
+    // Add active class to selected tab and content
+    document.querySelector(`[onclick="switchAvatarTab('${tabName}')"]`).classList.add('active');
+    
+    const contentMap = {
+        'upload': 'avatarUploadTab',
+        'url': 'avatarUrlTab',
+        'color': 'avatarColorTab'
+    };
+    
+    document.getElementById(contentMap[tabName]).classList.add('active');
+}
+
+function handleAvatarFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith('image/')) {
+        alert('이미지 파일만 선택할 수 있습니다.');
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const uploadPreview = document.getElementById('avatarUploadPreview');
+        const uploadImg = document.getElementById('avatarUploadImg');
+        
+        uploadImg.src = e.target.result;
+        uploadPreview.style.display = 'block';
+        
+        // Update current editing data
+        currentEditingAvatarData = {
+            avatarType: 'image',
+            avatarData: e.target.result
+        };
+    };
+    
+    reader.readAsDataURL(file);
+}
+
+function handleAvatarUrlChange() {
+    const url = document.getElementById('avatarUrlInput').value.trim();
+    if (url) {
+        currentEditingAvatarData = {
+            avatarType: 'url',
+            avatarData: url
+        };
+    }
+}
+
+function loadAvatarFromUrl() {
+    const url = document.getElementById('avatarUrlInput').value.trim();
+    if (!url) return;
+    
+    const urlPreview = document.getElementById('avatarUrlPreview');
+    const urlImg = document.getElementById('avatarUrlImg');
+    
+    urlImg.onload = function() {
+        urlPreview.style.display = 'block';
+        currentEditingAvatarData = {
+            avatarType: 'url',
+            avatarData: url
+        };
+    };
+    
+    urlImg.onerror = function() {
+        alert('이미지를 불러올 수 없습니다. URL을 확인해주세요.');
+        urlPreview.style.display = 'none';
+    };
+    
+    urlImg.src = url;
+}
+
+function handleAvatarColorChange() {
+    const color = document.getElementById('avatarColorInput').value;
+    document.getElementById('avatarColorSample').style.backgroundColor = color;
+    
+    currentEditingAvatarData = {
+        avatarType: 'color',
+        avatarData: color
+    };
+}
+
+function clearAvatarImage() {
+    if (!currentEditingCharacter || !chatData) return;
+    
+    // Remove avatar data from all messages of this character
+    chatData.messages.forEach(message => {
+        if (message.characterName === currentEditingCharacter) {
+            delete message.avatarType;
+            delete message.avatarData;
+        }
+    });
+    
+    // Re-render messages and close modal
+    renderMessages();
+    closeAvatarModal();
+}
+
+function applyAvatarChange() {
+    if (!currentEditingCharacter || !currentEditingAvatarData || !chatData) return;
+    
+    // Apply avatar data to all messages of this character
+    chatData.messages.forEach(message => {
+        if (message.characterName === currentEditingCharacter) {
+            message.avatarType = currentEditingAvatarData.avatarType;
+            message.avatarData = currentEditingAvatarData.avatarData;
+        }
+    });
+    
+    // Re-render messages and close modal
+    renderMessages();
+    closeAvatarModal();
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('avatarChangeModal');
+    if (e.target === modal) {
+        closeAvatarModal();
+    }
+});
+
+// Fixed Sidebar functionality
+let selectedColorBlocks = new Set();
+let currentSelectedBlock = null;
+
+
+// Color Block functionality
+function selectColorBlock(blockElement, messageIndex, blockIndex) {
+    // Clear previous selections
+    document.querySelectorAll('.solid-color-block.selected').forEach(block => {
+        block.classList.remove('selected');
+    });
+    
+    // Select this block
+    blockElement.classList.add('selected');
+    currentSelectedBlock = { messageIndex, blockIndex, element: blockElement };
+    
+    // Show options panel
+    showColorBlockPanel(messageIndex, blockIndex);
+}
+
+function showColorBlockPanel(messageIndex, blockIndex) {
+    const panel = document.getElementById('colorBlockPanel');
+    const block = chatData.messages[messageIndex].colorBlocks[blockIndex];
+    
+    // Set current values
+    document.getElementById('blockColorPicker').value = block.color || '#f0f2f5';
+    document.getElementById('blockOpacitySlider').value = Math.round((block.opacity || 0.8) * 100);
+    document.getElementById('opacityValue').textContent = Math.round((block.opacity || 0.8) * 100) + '%';
+    
+    panel.style.display = 'block';
+    
+    // Position the panel in the center of the screen
+    panel.style.position = 'fixed';
+    panel.style.zIndex = '10001';
+}
+
+function closeColorBlockPanel() {
+    const panel = document.getElementById('colorBlockPanel');
+    if (panel) {
+        panel.style.display = 'none';
+    }
+    
+    // Clear selection
+    document.querySelectorAll('.solid-color-block.selected').forEach(block => {
+        block.classList.remove('selected');
+    });
+    currentSelectedBlock = null;
+}
+
+function updateSelectedBlockColor(color) {
+    if (!currentSelectedBlock || !chatData) return;
+    
+    const { messageIndex, blockIndex } = currentSelectedBlock;
+    chatData.messages[messageIndex].colorBlocks[blockIndex].color = color;
+    
+    // Update visual immediately
+    if (currentSelectedBlock.element) {
+        currentSelectedBlock.element.style.backgroundColor = color;
+    }
+}
+
+function updateSelectedBlockOpacity(opacity) {
+    if (!currentSelectedBlock || !chatData) return;
+    
+    const { messageIndex, blockIndex } = currentSelectedBlock;
+    const opacityValue = opacity / 100;
+    
+    chatData.messages[messageIndex].colorBlocks[blockIndex].opacity = opacityValue;
+    document.getElementById('opacityValue').textContent = opacity + '%';
+    
+    // Update visual immediately
+    if (currentSelectedBlock.element) {
+        currentSelectedBlock.element.style.opacity = opacityValue;
+    }
+}
+
+function moveSelectedBlockUp() {
+    if (!currentSelectedBlock || !chatData) return;
+    
+    const { messageIndex, blockIndex } = currentSelectedBlock;
+    const blocks = chatData.messages[messageIndex].colorBlocks;
+    
+    if (blockIndex > 0) {
+        // Swap with previous block
+        [blocks[blockIndex], blocks[blockIndex - 1]] = [blocks[blockIndex - 1], blocks[blockIndex]];
+        renderMessages();
+        closeColorBlockPanel();
+    }
+}
+
+function moveSelectedBlockDown() {
+    if (!currentSelectedBlock || !chatData) return;
+    
+    const { messageIndex, blockIndex } = currentSelectedBlock;
+    const blocks = chatData.messages[messageIndex].colorBlocks;
+    
+    if (blockIndex < blocks.length - 1) {
+        // Swap with next block
+        [blocks[blockIndex], blocks[blockIndex + 1]] = [blocks[blockIndex + 1], blocks[blockIndex]];
+        renderMessages();
+        closeColorBlockPanel();
+    }
+}
+
+function deleteSelectedBlock() {
+    if (!currentSelectedBlock || !chatData) return;
+    
+    const { messageIndex, blockIndex } = currentSelectedBlock;
+    chatData.messages[messageIndex].colorBlocks.splice(blockIndex, 1);
+    
+    // Remove colorBlocks array if empty
+    if (chatData.messages[messageIndex].colorBlocks.length === 0) {
+        delete chatData.messages[messageIndex].colorBlocks;
+    }
+    
+    renderMessages();
+    closeColorBlockPanel();
+}
+
+// Close panels when clicking outside
+document.addEventListener('click', function(e) {
+    const colorBlockPanel = document.getElementById('colorBlockPanel');
+    
+    // Close color block panel when clicking outside
+    if (colorBlockPanel && colorBlockPanel.style.display === 'block') {
+        // Don't close if clicking inside the panel itself
+        if (!colorBlockPanel.contains(e.target)) {
+            // Don't close if clicking on a block control button or the block itself
+            if (!e.target.closest('.block-control-btn') && 
+                !e.target.closest('.solid-color-block')) {
+                closeColorBlockPanel();
+            }
+        }
+    }
+});
+
+// Also close panel when pressing Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const colorBlockPanel = document.getElementById('colorBlockPanel');
+        if (colorBlockPanel && colorBlockPanel.style.display === 'block') {
+            closeColorBlockPanel();
+        }
+    }
+});
 
 // Initialize
 applySettings();

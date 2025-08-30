@@ -42,6 +42,44 @@
         </div>
 
         <div class="main-layout">
+            <!-- Left Sidebar for Name Management -->
+            <div class="name-sidebar-fixed" id="nameSidebarFixed">
+                <div class="sidebar-header">
+                    <div class="sidebar-icon">👥</div>
+                    <h3>이름 일괄 변경</h3>
+                    <div class="character-count-badge" id="characterCountBadge" style="display: none;">0</div>
+                </div>
+                
+                <div class="sidebar-content">
+                    <div class="sidebar-info">
+                        <p>채팅에 등장하는 캐릭터의 이름을 일괄적으로 변경할 수 있습니다.</p>
+                    </div>
+                    
+                    <div class="name-change-section">
+                        <div class="section-title">
+                            캐릭터 이름 변경
+                        </div>
+                        <div class="name-change-container">
+                            <div id="nameChangeList">
+                                <!-- 동적으로 생성됨 -->
+                            </div>
+                            <div class="empty-state" id="emptyState" style="display: none;">
+                                <div class="empty-icon">👤</div>
+                                <div class="empty-text">아직 캐릭터가 없습니다</div>
+                                <div class="empty-subtext">JSON 파일을 로드하면 캐릭터 목록이 표시됩니다</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="sidebar-actions">
+                        <button class="btn-primary" onclick="resetNames()" style="width: 100%;">
+                            <span style="margin-right: 8px;">↺</span>
+                            원래 이름으로 복원
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div class="preview-container">
                 <div class="preview-header">
                     <div class="preview-info">
@@ -164,17 +202,31 @@
                     <input type="number" id="defaultBlockOpacity" min="0" max="100" value="80">
                 </div>
 
+            </div>
+        </div>
+    </div>
 
-                <div class="control-section">
-                    <div class="section-title">이름 일괄 변경</div>
-                    <div id="nameChangeList" style="margin-bottom: 12px;">
-                        <!-- 동적으로 생성됨 -->
-                    </div>
-                    <button class="btn-secondary" onclick="resetNames()" style="width: 100%; margin-top: 8px;">
-                        ↺ 원래 이름으로 복원
-                    </button>
-                </div>
 
+    <!-- Color Block Options Panel -->
+    <div id="colorBlockPanel" class="color-block-panel" style="display: none;">
+        <div class="panel-header">
+            <h4>단색 블럭 옵션</h4>
+            <button class="panel-close-btn" onclick="closeColorBlockPanel()">&times;</button>
+        </div>
+        <div class="panel-content">
+            <div class="panel-control">
+                <label>색상</label>
+                <input type="color" id="blockColorPicker" onchange="updateSelectedBlockColor(this.value)">
+            </div>
+            <div class="panel-control">
+                <label>투명도</label>
+                <input type="range" id="blockOpacitySlider" min="0" max="100" value="80" onchange="updateSelectedBlockOpacity(this.value)">
+                <span id="opacityValue">80%</span>
+            </div>
+            <div class="panel-actions">
+                <button class="panel-btn" onclick="moveSelectedBlockUp()" title="위로 이동">↑</button>
+                <button class="panel-btn" onclick="moveSelectedBlockDown()" title="아래로 이동">↓</button>
+                <button class="panel-btn danger" onclick="deleteSelectedBlock()" title="삭제">🗑</button>
             </div>
         </div>
     </div>
@@ -202,6 +254,75 @@
         <button class="format-btn" onclick="clearFormat()" title="서식 제거">
             ✕
         </button>
+    </div>
+
+    <!-- Avatar Change Modal -->
+    <div id="avatarChangeModal" class="avatar-modal">
+        <div class="avatar-modal-content">
+            <div class="avatar-modal-header">
+                <h3>캐릭터 이미지 변경</h3>
+                <button class="avatar-modal-close" onclick="closeAvatarModal()">&times;</button>
+            </div>
+            
+            <div class="avatar-modal-body">
+                <div class="avatar-character-info">
+                    <span class="current-character-name" id="currentCharacterName">캐릭터 이름</span>
+                </div>
+                
+                <div class="avatar-option-tabs">
+                    <button class="avatar-tab active" onclick="switchAvatarTab('upload')">이미지 첨부</button>
+                    <button class="avatar-tab" onclick="switchAvatarTab('url')">링크</button>
+                    <button class="avatar-tab" onclick="switchAvatarTab('color')">단색</button>
+                </div>
+                
+                <div class="avatar-option-content">
+                    <!-- 이미지 첨부 탭 -->
+                    <div class="avatar-tab-content active" id="avatarUploadTab">
+                        <div class="avatar-upload-area">
+                            <input type="file" id="avatarFileInput" accept="image/*" onchange="handleAvatarFileUpload(event)" style="display: none;">
+                            <label for="avatarFileInput" class="avatar-upload-label">
+                                <div class="upload-icon">📁</div>
+                                <div class="upload-text">이미지 파일 선택</div>
+                                <div class="upload-hint">JPG, PNG, GIF 파일 지원</div>
+                            </label>
+                        </div>
+                        <div class="avatar-preview" id="avatarUploadPreview" style="display: none;">
+                            <img id="avatarUploadImg" src="" alt="미리보기">
+                        </div>
+                    </div>
+                    
+                    <!-- 링크 탭 -->
+                    <div class="avatar-tab-content" id="avatarUrlTab">
+                        <div class="avatar-url-input">
+                            <input type="text" id="avatarUrlInput" placeholder="이미지 URL을 입력하세요" onchange="handleAvatarUrlChange()">
+                            <button onclick="loadAvatarFromUrl()">불러오기</button>
+                        </div>
+                        <div class="avatar-preview" id="avatarUrlPreview" style="display: none;">
+                            <img id="avatarUrlImg" src="" alt="미리보기">
+                        </div>
+                    </div>
+                    
+                    <!-- 단색 탭 -->
+                    <div class="avatar-tab-content" id="avatarColorTab">
+                        <div class="avatar-color-picker">
+                            <label for="avatarColorInput">배경 색상</label>
+                            <input type="color" id="avatarColorInput" value="#4267b2" onchange="handleAvatarColorChange()">
+                        </div>
+                        <div class="avatar-preview" id="avatarColorPreview">
+                            <div class="avatar-color-sample" id="avatarColorSample" style="background-color: #4267b2;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="avatar-modal-footer">
+                <button class="btn-secondary" onclick="clearAvatarImage()">기본 이미지로 복원</button>
+                <div class="avatar-modal-actions">
+                    <button class="btn-secondary" onclick="closeAvatarModal()">취소</button>
+                    <button class="btn-primary" onclick="applyAvatarChange()">적용</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
